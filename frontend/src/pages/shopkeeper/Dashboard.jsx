@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { Store, Bell, ChefHat, Boxes, QrCode, IndianRupee, ArrowLeftRight, Printer } from 'lucide-react';
 import { useI18n } from '../../i18n/index.jsx';
@@ -22,6 +22,7 @@ export function Dashboard() {
   const {
     myShop,
     ordersForShop,
+    refreshQueue,
     isShopOpen,
     toggleShopOpen,
     acceptOrder,
@@ -31,7 +32,29 @@ export function Dashboard() {
   } = useStore();
   const [tab, setTab] = useState('new');
 
-  const orders = myShop ? ordersForShop(myShop.slug) : [];
+  const slug = myShop ? myShop.slug : null;
+  const orders = slug ? ordersForShop(slug) : [];
+
+  // Live queue: fetch on mount + focus, poll every 15s while the shop is open.
+  const openRef = useRef(false);
+  openRef.current = slug ? isShopOpen(slug) : false;
+  useEffect(() => {
+    if (!slug) return undefined;
+    refreshQueue(slug);
+    const onFocus = () => {
+      if (!document.hidden) refreshQueue(slug);
+    };
+    document.addEventListener('visibilitychange', onFocus);
+    window.addEventListener('focus', onFocus);
+    const id = setInterval(() => {
+      if (openRef.current && !document.hidden) refreshQueue(slug);
+    }, 15_000);
+    return () => {
+      document.removeEventListener('visibilitychange', onFocus);
+      window.removeEventListener('focus', onFocus);
+      clearInterval(id);
+    };
+  }, [slug, refreshQueue]);
   const groups = useMemo(
     () => ({
       new: orders.filter((o) => o.status === 'PENDING_ACCEPTANCE'),
@@ -46,8 +69,17 @@ export function Dashboard() {
 
   const shop = myShop;
   const open = isShopOpen(shop.slug);
-  const cashToday = groups.history.reduce((s, o) => s + o.subtotal_amount, 0);
-  const actions = { onAccept: acceptOrder, onReject: rejectOrder, onReady: markReady, onCollected: markCollected };
+  const cashToday = groups.history.reduce((s, o) => s + (o.subtotal_amount || 0), 0);
+  // On a 409 (order changed under us) just refetch the queue so the card catches up.
+  const onErr = (e) => {
+    if (e && e.status === 409) refreshQueue(shop.slug);
+  };
+  const actions = {
+    onAccept: (id) => acceptOrder(id).catch(onErr),
+    onReject: (id) => rejectOrder(id).catch(onErr),
+    onReady: (id) => markReady(id).catch(onErr),
+    onCollected: (id) => markCollected(id).catch(onErr),
+  };
 
   return (
     <div className="min-h-screen pb-24">

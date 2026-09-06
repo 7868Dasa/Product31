@@ -7,15 +7,136 @@
  * Dummy credentials: any 10-digit number, OTP code is always 123456.
  */
 import { haversineKm } from './geo.js';
-import { DEMO_SHOPS, demoShop, demoInventory } from './mockData.js';
+import { DEMO_SHOPS, demoShop, demoInventory, demoInventoryFull } from './mockData.js';
 import { newShopSlug } from './slug.js';
 import { shopShareUrl } from './qr.js';
 import { priceBand } from './price.js';
+import { seedDemoOrders, seedMyDemoOrders } from './demoOrders.js';
+import { STATUS, ACTIVE, TRANSITIONS, nextStatus, isExpired } from './orderState.js';
 
 const DEMO_OTP = '123456';
 const USER_KEY = 'p31.demo.user';
 const MYSHOP_KEY = 'p31.demo.myshop';
 const CATALOG_KEY = 'p31.demo.catalog';
+const ORDERS_KEY = 'p31.demo.orders';
+const DEMO_SLA_MIN = 5; // matches every demo shop's acceptance_sla_minutes
+
+const ORDER_ALPHABET = '23456789ABCDEFGHJKMNPQRSTVWXYZ';
+const demoOrderCode = () =>
+  Array.from({ length: 4 }, () => ORDER_ALPHABET[Math.floor(Math.random() * ORDER_ALPHABET.length)]).join('');
+
+// ── demo order store (localStorage; the mockApi owns it after the swap) ──────
+
+function loadOrders() {
+  const stored = readJson(ORDERS_KEY);
+  if (Array.isArray(stored)) return stored;
+  const seed = [...seedMyDemoOrders(), ...seedDemoOrders()];
+  try {
+    localStorage.setItem(ORDERS_KEY, JSON.stringify(seed));
+  } catch {
+    /* ignore */
+  }
+  return seed;
+}
+function saveOrders(list) {
+  try {
+    localStorage.setItem(ORDERS_KEY, JSON.stringify(list));
+  } catch {
+    /* ignore */
+  }
+}
+
+function shopFor(slug) {
+  return demoShop(slug) || myShopBySlug(slug) || { shop_name: slug, price_display_mode: 'exact' };
+}
+
+/** Light phone mask for the shopkeeper view (real backend uses lib/logger maskPhone). */
+function maskDemoPhone(phone) {
+  if (!phone) return null;
+  if (phone.includes('•') || phone.includes('*')) return phone;
+  const d = String(phone).replace(/\D/g, '');
+  if (d.length < 4) return '••••';
+  return `+91${d.slice(-10, -6).replace(/./g, '•')}••••${d.slice(-4)}`;
+}
+function priceModeOf(shop, order) {
+  return (shop && (shop.price_display_mode || shop.price_mode)) || (order && order.price_mode) || 'exact';
+}
+
+/** id -> inventory/catalog row, the trusted price source in demo mode. */
+function demoShopPrices(slug) {
+  const rows = demoShop(slug)
+    ? demoInventoryFull(slug)
+    : (readJson(CATALOG_KEY) || {})[slug] || [];
+  return new Map(rows.map((r) => [r.id, r]));
+}
+
+/** Flip any PENDING order past the SLA to EXPIRED (lazy, on read). */
+function settleExpiry(list) {
+  let changed = false;
+  const out = list.map((o) => {
+    const placed = Date.parse(o.pending_acceptance_at || o.created_at);
+    if (isExpired(o.status, placed, DEMO_SLA_MIN)) {
+      changed = true;
+      return { ...o, status: STATUS.EXPIRED, expired_at: new Date().toISOString() };
+    }
+    return o;
+  });
+  return { list: out, changed };
+}
+
+/** Shape an order for the client, honouring hidden-price rules (plan-eng-review Q5). */
+function serializeOrder(o, viewer, shop) {
+  const mode = priceModeOf(shop, o);
+  const hide = viewer === 'shopper' && mode === 'hidden' && o.status === STATUS.PENDING_ACCEPTANCE;
+  const items = (o.items || []).map((it) => {
+    const unitPrice = Number(it.unit_price || 0);
+    const lineTotal =
+      it.line_total != null
+        ? Number(it.line_total)
+        : Math.round(unitPrice * Number(it.quantity) * 100) / 100;
+    return {
+      name: it.name,
+      name_ta: it.name_ta || null,
+      pack_size: it.pack_size || null,
+      quantity: Number(it.quantity),
+      sell_by: it.sell_by || 'pack',
+      unit: it.unit || 'pack',
+      price_basis: it.price_basis || 'per_pack',
+      ...(hide ? {} : { unit_price: unitPrice, line_total: lineTotal }),
+    };
+  });
+  const subtotal =
+    o.subtotal_amount != null
+      ? Number(o.subtotal_amount)
+      : Math.round(items.reduce((s, l) => s + (l.line_total || 0), 0) * 100) / 100;
+  const out = {
+    id: o.id,
+    order_code: o.order_code,
+    shop_slug: o.shop_slug,
+    shop_name: o.shop_name || (shop && shop.shop_name) || o.shop_slug,
+    status: o.status,
+    created_at: o.created_at,
+    pending_acceptance_at: o.pending_acceptance_at || null,
+    accepted_at: o.accepted_at || null,
+    rejected_at: o.rejected_at || null,
+    expired_at: o.expired_at || null,
+    ready_at: o.ready_at || null,
+    collected_at: o.collected_at || null,
+    no_show_at: o.no_show_at || null,
+    pickup_slot_label: o.pickup_slot_label || 'ASAP',
+    rejection_reason: o.rejection_reason || null,
+    price_mode: mode,
+    price_pending: hide,
+    mine: viewer === 'shopper' || !!o.mine,
+    items,
+    ...(hide ? {} : { subtotal_amount: subtotal }),
+  };
+  if (viewer === 'owner') {
+    out.customer_name = o.customer_name || `Order ${o.order_code}`;
+    out.customer_phone_masked = maskDemoPhone(o.customer_phone);
+  }
+  return out;
+}
 
 function readJson(key) {
   try {
@@ -186,6 +307,138 @@ export async function mockApi(path, { method = 'GET', body } = {}) {
     const shop = demoShop(shopMatch[1]) || myShopBySlug(shopMatch[1]);
     if (!shop) throw new MockError(404, 'SHOP_NOT_FOUND', 'That shop could not be found.');
     return { shop };
+  }
+
+  // ── orders (build step 4, scoped) ────────────────────────────────────
+  const shopOrdersMatch = pathname.match(/^\/shops\/([0-9A-Z]{4,16})\/orders$/);
+  if (shopOrdersMatch && method === 'POST') {
+    const slug = shopOrdersMatch[1];
+    const shop = demoShop(slug) || myShopBySlug(slug);
+    if (!shop) throw new MockError(404, 'SHOP_NOT_FOUND', 'That shop could not be found.');
+
+    const key = body?.idempotency_key;
+    if (!key) throw new MockError(400, 'VALIDATION_ERROR', 'Missing idempotency_key.');
+    const all = loadOrders();
+    const dupe = all.find((o) => o.idempotency_key && o.idempotency_key === key);
+    if (dupe) return { order: serializeOrder(dupe, 'shopper', shop) };
+
+    if (shop.is_open === false) {
+      throw new MockError(409, 'SHOP_CLOSED', 'This shop is not taking orders right now.');
+    }
+
+    const prices = demoShopPrices(slug);
+    const lines = (body?.items || []).map((it) => {
+      const row = prices.get(it.item_id);
+      if (!row) throw new MockError(400, 'ITEM_NOT_SOLD_HERE', 'One of those items is not sold at this shop.');
+      const qty = Number(it.quantity);
+      if (!(qty > 0)) throw new MockError(400, 'BAD_QUANTITY', 'Invalid quantity for an item.');
+      const unit = Number(row.price);
+      return {
+        name: row.name,
+        name_ta: row.name_ta || null,
+        pack_size: row.pack_size || null,
+        quantity: qty,
+        unit_price: unit,
+        sell_by: row.sell_by || 'pack',
+        unit:
+          row.sell_by === 'weight'
+            ? row.base_unit || 'kg'
+            : row.sell_by === 'piece'
+              ? 'pcs'
+              : 'pack',
+        price_basis: row.price_basis || 'per_pack',
+        line_total: Math.round(unit * qty * 100) / 100,
+      };
+    });
+    if (!lines.length) throw new MockError(400, 'EMPTY_ORDER', 'Your cart is empty.');
+
+    const now = new Date().toISOString();
+    const order = {
+      id: `o${Date.now()}`,
+      order_code: demoOrderCode(),
+      shop_slug: slug,
+      shop_name: shop.shop_name,
+      status: STATUS.PENDING_ACCEPTANCE,
+      created_at: now,
+      pending_acceptance_at: now,
+      pickup_slot_label: body?.pickup_slot_label || 'ASAP',
+      idempotency_key: key,
+      mine: true,
+      customer_name: (loadUser() || {}).full_name || 'You',
+      customer_phone: (loadUser() || {}).phone_number || '+9198••••0000',
+      items: lines,
+      subtotal_amount: Math.round(lines.reduce((s, l) => s + l.line_total, 0) * 100) / 100,
+      price_mode: shop.price_display_mode || shop.price_mode || 'exact',
+    };
+    saveOrders([order, ...all]);
+    return { order: serializeOrder(order, 'shopper', shop) };
+  }
+
+  if (shopOrdersMatch && method === 'GET') {
+    const slug = shopOrdersMatch[1];
+    const shop = demoShop(slug) || myShopBySlug(slug);
+    if (!shop) throw new MockError(404, 'SHOP_NOT_FOUND', 'That shop could not be found.');
+    const { list, changed } = settleExpiry(loadOrders());
+    if (changed) saveOrders(list);
+    let rows = list.filter((o) => o.shop_slug === slug);
+    const status = q.get('status');
+    if (status === 'active') rows = rows.filter((o) => ACTIVE.includes(o.status));
+    else if (status) rows = rows.filter((o) => o.status === status);
+    rows = rows.slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    return { count: rows.length, orders: rows.map((o) => serializeOrder(o, 'owner', shop)) };
+  }
+
+  if (pathname === '/orders/mine' && method === 'GET') {
+    const { list, changed } = settleExpiry(loadOrders());
+    if (changed) saveOrders(list);
+    const rows = list
+      .filter((o) => o.mine)
+      .slice()
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    return { count: rows.length, orders: rows.map((o) => serializeOrder(o, 'shopper', shopFor(o.shop_slug))) };
+  }
+
+  const oneOrderMatch = pathname.match(/^\/orders\/([^/]+)$/);
+  if (oneOrderMatch && method === 'GET') {
+    const { list, changed } = settleExpiry(loadOrders());
+    if (changed) saveOrders(list);
+    const o = list.find((x) => x.id === oneOrderMatch[1]);
+    if (!o) throw new MockError(404, 'ORDER_NOT_FOUND', 'That order could not be found.');
+    return { order: serializeOrder(o, o.mine ? 'shopper' : 'owner', shopFor(o.shop_slug)) };
+  }
+
+  const transMatch = pathname.match(/^\/orders\/([^/]+)\/transitions$/);
+  if (transMatch && method === 'POST') {
+    const all = loadOrders();
+    const idx = all.findIndex((o) => o.id === transMatch[1]);
+    if (idx < 0) throw new MockError(404, 'ORDER_NOT_FOUND', 'That order could not be found.');
+
+    let o = all[idx];
+    const placed = Date.parse(o.pending_acceptance_at || o.created_at);
+    if (isExpired(o.status, placed, DEMO_SLA_MIN)) {
+      o = { ...o, status: STATUS.EXPIRED, expired_at: new Date().toISOString() };
+      all[idx] = o;
+    }
+
+    const action = body?.action;
+    const t = TRANSITIONS[action];
+    if (!t) throw new MockError(400, 'UNKNOWN_ACTION', 'Unknown order action.');
+    if (action === 'reject' && !body?.reason) {
+      throw new MockError(400, 'REASON_REQUIRED', 'A reason is required to reject an order.');
+    }
+    const to = nextStatus(o.status, action);
+    if (!to) {
+      throw new MockError(409, 'ILLEGAL_TRANSITION', `Cannot ${action} an order that is ${o.status}.`);
+    }
+    const next = {
+      ...o,
+      status: to,
+      [t.stamp]: new Date().toISOString(),
+      ...(action === 'reject' ? { rejection_reason: body.reason } : {}),
+    };
+    all[idx] = next;
+    saveOrders(all);
+    return { order: serializeOrder(next, 'owner', shopFor(next.shop_slug)) };
   }
 
   // ── account rights (DPDP): consent, export, delete ──────────────────

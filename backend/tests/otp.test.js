@@ -41,7 +41,9 @@ describe('id generators', () => {
     expect(seen.size).toBe(1000); // no collisions in 1k draws
   });
 
-  it('order codes look like P31-XXXXXX', () => {
-    expect(newOrderCode()).toMatch(/^P31-[23456789ABCDEFGHJKMNPQRSTVWXYZ]{6}$/);
+  it('order codes are 4 short, readable chars (unique per shop+day, not global)', () => {
+    for (let i = 0; i < 200; i++) {
+      expect(newOrderCode()).toMatch(/^[23456789ABCDEFGHJKMNPQRSTVWXYZ]{4}$/);
+    }
   });
 });

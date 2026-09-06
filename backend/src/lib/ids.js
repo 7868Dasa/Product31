@@ -20,9 +20,13 @@ export function newShopSlug() {
   return randomToken(8);
 }
 
-/** Human-friendly order code, e.g. "P31-8FK2Q9". */
+/**
+ * Short order code the shopkeeper reads aloud at the counter, e.g. "B4K9".
+ * Only unique per (shop, day) — see migration 0008 — so 4 chars is plenty and
+ * stays easy to say and type. The orders service retries on the rare collision.
+ */
 export function newOrderCode() {
-  return `P31-${randomToken(6)}`;
+  return randomToken(4);
 }
 
 /** Server-side idempotency key fallback if the client didn't send one. */

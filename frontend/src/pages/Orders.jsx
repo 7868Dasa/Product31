@@ -1,11 +1,11 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Store, RotateCcw, Check, PieChart } from 'lucide-react';
 import { useI18n } from '../i18n/index.jsx';
 import { useStore } from '../store.jsx';
 import { TopBar } from '../components/TopBar.jsx';
+import { ACTIVE } from '../lib/orderState.js';
 
-const OPEN = ['PENDING_ACCEPTANCE', 'ACCEPTED', 'READY_FOR_PICKUP'];
 const STEPS = ['placed', 'accepted', 'ready', 'collected'];
 const STEP_OF = {
   PENDING_ACCEPTANCE: 0,
@@ -22,7 +22,7 @@ function timeAgo(iso, t) {
 }
 
 function StatusBar({ status, t }) {
-  if (!OPEN.includes(status) && status !== 'COLLECTED') return null;
+  if (!ACTIVE.includes(status) && status !== 'COLLECTED') return null;
   const cur = STEP_OF[status] ?? 0;
   return (
     <ol className="mt-3 flex items-center gap-1">
@@ -51,6 +51,7 @@ function OrderCard({ order, onBuyAgain }) {
     .map((i) => (lang === 'ta' && i.name_ta ? i.name_ta : i.name))
     .slice(0, 3)
     .join(', ');
+  const done = !ACTIVE.includes(order.status);
 
   return (
     <article className="rounded-xl2 border-2 border-sand bg-white p-4">
@@ -72,7 +73,7 @@ function OrderCard({ order, onBuyAgain }) {
               ? 'bg-go/15 text-go'
               : order.status === 'READY_FOR_PICKUP'
                 ? 'bg-primary text-white'
-                : OPEN.includes(order.status)
+                : ACTIVE.includes(order.status)
                   ? 'bg-primary-tint text-primary-dark'
                   : 'bg-stop/15 text-stop'
           }`}
@@ -85,12 +86,19 @@ function OrderCard({ order, onBuyAgain }) {
         {t('orders.items', { n: count })} · {summary}
       </p>
       <p className="text-base font-bold">
-        {t('sk.total')} ₹{order.subtotal_amount}
+        {order.price_pending || order.subtotal_amount == null
+          ? t('shop.priceAtCounter')
+          : `${t('sk.total')} ₹${order.subtotal_amount}`}
       </p>
+      {order.status === 'REJECTED' && order.rejection_reason && (
+        <p className="mt-1 text-sm text-stop">
+          {t('ord.rejectedReason', { reason: order.rejection_reason })}
+        </p>
+      )}
 
       <StatusBar status={order.status} t={t} />
 
-      {!OPEN.includes(order.status) && (
+      {done && (
         <button
           onClick={() => onBuyAgain(order)}
           className="mt-3 inline-flex items-center gap-1.5 rounded-full border-2 border-primary px-4 py-2 text-sm font-bold text-primary active:bg-primary-tint"
@@ -102,16 +110,46 @@ function OrderCard({ order, onBuyAgain }) {
   );
 }
 
+/** Fetch on mount + on tab focus; poll every 20s while an order is active. */
+function useLiveOrders(refreshMyOrders, orders) {
+  const hasActive = useMemo(() => orders.some((o) => ACTIVE.includes(o.status)), [orders]);
+  const activeRef = useRef(hasActive);
+  activeRef.current = hasActive;
+
+  useEffect(() => {
+    refreshMyOrders();
+    const onFocus = () => {
+      if (!document.hidden) refreshMyOrders();
+    };
+    document.addEventListener('visibilitychange', onFocus);
+    window.addEventListener('focus', onFocus);
+    const id = setInterval(() => {
+      if (activeRef.current && !document.hidden) refreshMyOrders();
+    }, 20_000);
+    return () => {
+      document.removeEventListener('visibilitychange', onFocus);
+      window.removeEventListener('focus', onFocus);
+      clearInterval(id);
+    };
+  }, [refreshMyOrders]);
+}
+
 export function Orders({ user }) {
   const { t } = useI18n();
   const navigate = useNavigate();
-  const { myOrders, buyAgain } = useStore();
+  const { myOrders, refreshMyOrders, buyAgain } = useStore();
+  const [loaded, setLoaded] = useState(false);
   const all = myOrders();
+
+  useLiveOrders(refreshMyOrders, all);
+  useEffect(() => {
+    refreshMyOrders().finally(() => setLoaded(true));
+  }, [refreshMyOrders]);
 
   const { active, past } = useMemo(
     () => ({
-      active: all.filter((o) => OPEN.includes(o.status)),
-      past: all.filter((o) => !OPEN.includes(o.status)),
+      active: all.filter((o) => ACTIVE.includes(o.status)),
+      past: all.filter((o) => !ACTIVE.includes(o.status)),
     }),
     [all],
   );
@@ -137,7 +175,7 @@ export function Orders({ user }) {
           )}
         </div>
 
-        {all.length === 0 && (
+        {loaded && all.length === 0 && (
           <p className="rounded-xl2 border-2 border-dashed border-sand px-4 py-10 text-center text-ink-soft">
             {t('orders.empty')}
           </p>

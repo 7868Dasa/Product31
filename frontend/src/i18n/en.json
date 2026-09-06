@@ -24,6 +24,7 @@
   "ord.status.REJECTED": "Not accepted",
   "ord.status.EXPIRED": "Expired",
   "ord.status.NO_SHOW": "Missed pickup",
+  "ord.rejectedReason": "Shop couldn't fill it: {reason}",
 
   "time.min": "{n} min ago",
   "time.hr": "{n} hr ago",
@@ -154,6 +155,7 @@
   "cart.title": "Your order",
   "cart.clear": "Clear cart",
   "cart.place": "Place order — Cash on pickup",
+  "cart.placing": "Placing your order…",
   "cart.codNote": "You pay cash when you collect. The shop confirms first.",
   "cart.placedTitle": "Order placed",
   "cart.placedSub": "Show this code at the counter:",

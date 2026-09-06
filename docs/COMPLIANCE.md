@@ -57,7 +57,7 @@ Status: ☐ not started · ◐ in progress · ☑ done (code) · ⚖ awaiting le
 |---|---|---|
 | Seller (shop) identity shown: name, address, contact | DEV | ☑ shop detail + onboarding |
 | Clear total price, no hidden charges | DEV | ☑ per-item price / range / at-counter; COD only |
-| Cancellation outcomes defined (REJECTED / EXPIRED / NO_SHOW) | DEV / LEGAL | ◐ state machine done; consumer-facing policy text pending |
+| Cancellation outcomes defined (REJECTED / EXPIRED / NO_SHOW) | DEV / LEGAL | ◐ state machine built (`lib/orderState.js` + `modules/orders`, forward-only, guarded); consumer-facing policy text pending |
 | Grievance officer + SLA (48h ack / 1 month resolve) | YOU / DEV | ☐ |
 | No unfair trade practice / no fake reviews | DEV | ☑ no reviews feature exists |
 
@@ -68,6 +68,7 @@ Status: ☐ not started · ◐ in progress · ☑ done (code) · ⚖ awaiting le
 | Register Principal Entity on a DLT portal | YOU | ☐ **start now — longest lead time** |
 | Register Header (sender ID) | YOU | ☐ |
 | Register OTP content template (transactional) | YOU | ☐ |
+| Register "order rejected" content template (transactional) | YOU | ☐ `MSG91_REJECT_TEMPLATE_ID` — the only order-status SMS |
 | MSG91 linked to the registered entity | YOU | ☐ |
 | Dev uses `OTP_MOCK=true` until the above clears | DEV | ☑ |
 

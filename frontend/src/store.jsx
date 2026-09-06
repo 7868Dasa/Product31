@@ -1,33 +1,40 @@
 /**
- * Centralised demo store (React Context). Holds the cross-cutting UI state
- * that has no backend yet: the chosen role, the demo shopkeeper's order queue,
- * and per-shop open/closed. All of this moves to real API calls as build
- * steps 3-6 land; the component API here is meant to survive that swap.
+ * Centralised UI store (React Context).
+ *
+ * Orders now live in the backend (build step 4). This store keeps a fetched
+ * cache of the shopper's own orders and each shop's queue, plus the bits that
+ * still have no backend: chosen role, the demo shopkeeper's shop, per-shop
+ * open/closed, the local cart, and the ₹29 report-unlock flag. In VITE_DEMO
+ * the api() calls are served by lib/mockApi.js off localStorage.
  */
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { seedDemoOrders, seedMyDemoOrders } from './lib/demoOrders.js';
+import { api } from './lib/api.js';
 import { demoInventoryFull, demoShop } from './lib/mockData.js';
 import { catalogKey } from './lib/csv.js';
 import { buildSpendReport } from './lib/spend.js';
-
-const seedAllOrders = () => [...seedMyDemoOrders(), ...seedDemoOrders()];
+import { ACTIVE } from './lib/orderState.js';
 
 const StoreContext = createContext(null);
 
 const ROLE_KEY = 'p31.role';
-const ORDERS_KEY = 'p31.demo.orders';
 const SHOPSTATE_KEY = 'p31.demo.shopstate';
 const CATALOG_KEY = 'p31.demo.catalog';
 const MYSHOP_KEY = 'p31.demo.myshop';
 const CART_KEY = 'p31.demo.cart';
 const REPORT_KEY = 'p31.demo.report_unlocked';
-
-const ORDER_ALPHABET = '23456789ABCDEFGHJKMNPQRSTVWXYZ';
-const newOrderCode = () =>
-  Array.from({ length: 4 }, () => ORDER_ALPHABET[Math.floor(Math.random() * ORDER_ALPHABET.length)]).join('');
+const ORDERS_KEY = 'p31.demo.orders'; // owned by mockApi; cleared by resetDemoOrders
 
 /** The pre-baked demo shop (used by "skip onboarding"). */
 export const DEMO_SHOP_SLUG = 'MRGNKLKI';
+
+const newIdemKey = () => {
+  try {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  } catch {
+    /* ignore */
+  }
+  return `idem-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+};
 
 function demoShopFull() {
   return {
@@ -54,16 +61,8 @@ function save(key, v) {
   }
 }
 
-const STAMP = {
-  ACCEPTED: 'accepted_at',
-  REJECTED: 'rejected_at',
-  READY_FOR_PICKUP: 'ready_at',
-  COLLECTED: 'collected_at',
-};
-
 export function StoreProvider({ children }) {
   const [role, setRole] = useState(() => load(ROLE_KEY, null));
-  const [orders, setOrders] = useState(() => load(ORDERS_KEY, null) || seedAllOrders());
   const [shopOpen, setShopOpen] = useState(() => load(SHOPSTATE_KEY, { [DEMO_SHOP_SLUG]: true }));
   const [catalog, setCatalog] = useState(
     () => load(CATALOG_KEY, null) || { [DEMO_SHOP_SLUG]: demoInventoryFull(DEMO_SHOP_SLUG) },
@@ -72,18 +71,18 @@ export function StoreProvider({ children }) {
   const [cart, setCart] = useState(() => load(CART_KEY, {}));
   const [reportUnlocked, setReportUnlocked] = useState(() => load(REPORT_KEY, false));
 
+  // Backend-backed caches.
+  const [myOrdersList, setMyOrdersList] = useState([]);
+  const [queues, setQueues] = useState({}); // slug -> orders[]
+
   useEffect(() => save(REPORT_KEY, reportUnlocked), [reportUnlocked]);
   useEffect(() => save(ROLE_KEY, role), [role]);
-  useEffect(() => save(ORDERS_KEY, orders), [orders]);
   useEffect(() => save(SHOPSTATE_KEY, shopOpen), [shopOpen]);
   useEffect(() => save(CATALOG_KEY, catalog), [catalog]);
   useEffect(() => save(MYSHOP_KEY, myShop), [myShop]);
   useEffect(() => save(CART_KEY, cart), [cart]);
 
-  /**
-   * Persist a shop (from the onboarding API response, or the demo shop) as
-   * the signed-in shopkeeper's shop, and seed its catalog / open-state.
-   */
+  // ── shop adoption (demo shopkeeper) ────────────────────────────────────
   const adoptShop = useCallback((shop, { seedCatalog = false } = {}) => {
     setMyShop(shop);
     setShopOpen((p) => ({ ...p, [shop.slug]: shop.is_open ?? false }));
@@ -94,7 +93,6 @@ export function StoreProvider({ children }) {
     return shop;
   }, []);
 
-  /** Skip onboarding — use the fully-populated demo shop. */
   const useDemoShop = useCallback(
     () => adoptShop(demoShopFull(), { seedCatalog: true }),
     [adoptShop],
@@ -123,15 +121,91 @@ export function StoreProvider({ children }) {
     return { added, updated };
   }, []);
 
-  const transition = useCallback((id, status, extra = {}) => {
-    setOrders((prev) =>
-      prev.map((o) =>
-        o.id === id
-          ? { ...o, status, ...extra, [STAMP[status] || 'updated_at']: new Date().toISOString() }
-          : o,
-      ),
-    );
+  // ── orders: fetch + mutate via the API ────────────────────────────────
+  const refreshMyOrders = useCallback(async () => {
+    try {
+      const { orders } = await api('/orders/mine', { authed: true });
+      setMyOrdersList(orders);
+      return orders;
+    } catch {
+      return [];
+    }
   }, []);
+
+  const refreshQueue = useCallback(async (slug, status) => {
+    if (!slug) return [];
+    try {
+      const qs = status ? `?status=${status}` : '';
+      const { orders } = await api(`/shops/${slug}/orders${qs}`, { authed: true });
+      setQueues((q) => ({ ...q, [slug]: orders }));
+      return orders;
+    } catch {
+      return [];
+    }
+  }, []);
+
+  /** Patch one order everywhere it's cached after a transition. */
+  const applyOrderUpdate = useCallback((order) => {
+    setQueues((q) => {
+      const next = {};
+      for (const [slug, list] of Object.entries(q)) {
+        next[slug] = list.map((o) => (o.id === order.id ? { ...o, ...order } : o));
+      }
+      return next;
+    });
+    setMyOrdersList((prev) => prev.map((o) => (o.id === order.id ? { ...o, ...order } : o)));
+  }, []);
+
+  const placeOrder = useCallback(
+    async (slug, { pickup = 'ASAP' } = {}) => {
+      const lines = cart[slug] || [];
+      if (!lines.length) return null;
+      const { order } = await api(`/shops/${slug}/orders`, {
+        method: 'POST',
+        authed: true,
+        body: {
+          items: lines.map((l) => ({ item_id: l.id, quantity: l.qty })),
+          idempotency_key: newIdemKey(),
+          pickup_slot_label: pickup,
+        },
+      });
+      setCart((c) => ({ ...c, [slug]: [] }));
+      setMyOrdersList((prev) => [order, ...prev.filter((o) => o.id !== order.id)]);
+      return order;
+    },
+    [cart],
+  );
+
+  const transition = useCallback(
+    async (id, action, reason) => {
+      const { order } = await api(`/orders/${id}/transitions`, {
+        method: 'POST',
+        authed: true,
+        body: { action, ...(reason ? { reason } : {}) },
+      });
+      applyOrderUpdate(order);
+      return order;
+    },
+    [applyOrderUpdate],
+  );
+
+  const acceptOrder = useCallback((id) => transition(id, 'accept'), [transition]);
+  const rejectOrder = useCallback(
+    (id, reason) => transition(id, 'reject', reason || 'Item not available'),
+    [transition],
+  );
+  const markReady = useCallback((id) => transition(id, 'ready'), [transition]);
+  const markCollected = useCallback((id) => transition(id, 'collect'), [transition]);
+
+  const resetDemoOrders = useCallback(() => {
+    try {
+      localStorage.removeItem(ORDERS_KEY);
+    } catch {
+      /* ignore */
+    }
+    setQueues({});
+    return refreshMyOrders();
+  }, [refreshMyOrders]);
 
   const value = {
     role,
@@ -140,19 +214,29 @@ export function StoreProvider({ children }) {
     adoptShop,
     useDemoShop,
     clearMyShop: () => setMyShop(null),
-    orders,
-    ordersForShop: (slug) => orders.filter((o) => o.shop_slug === slug),
-    /** Shopper's own orders across EVERY shop, newest first. */
-    myOrders: () =>
-      orders.filter((o) => o.mine).sort((a, b) => new Date(b.created_at) - new Date(a.created_at)),
-    /** Free: the spending report data over the shopper's own orders. */
-    spendReport: () => buildSpendReport(orders),
+
+    // ── orders (backend-backed) ────────────────────────────────────────
+    myOrders: () => myOrdersList,
+    ordersForShop: (slug) => queues[slug] || [],
+    refreshMyOrders,
+    refreshQueue,
+    placeOrder,
+    acceptOrder,
+    rejectOrder,
+    markReady,
+    markCollected,
+    resetDemoOrders,
+    hasActiveOrder: () => myOrdersList.some((o) => ACTIVE.includes(o.status)),
+
+    /** Free: the spending report over the shopper's own orders. */
+    spendReport: () => buildSpendReport(myOrdersList),
     reportUnlocked,
     /** Demo: simulate the one-time ₹29 unlock (no real charge). */
     unlockSpendReport: () => {
       setReportUnlocked(true);
       return { unlocked: true, amount: 29, currency: 'INR', demo: true, at: new Date().toISOString() };
     },
+
     /** Put a past order's lines back in that shop's cart. */
     buyAgain: (order) => {
       const lines = (order.items || []).map((it, i) => ({
@@ -168,13 +252,9 @@ export function StoreProvider({ children }) {
       setCart((c) => ({ ...c, [order.shop_slug]: lines }));
       return order.shop_slug;
     },
-    acceptOrder: (id) => transition(id, 'ACCEPTED'),
-    rejectOrder: (id, reason) => transition(id, 'REJECTED', { rejection_reason: reason || 'Item not available' }),
-    markReady: (id) => transition(id, 'READY_FOR_PICKUP'),
-    markCollected: (id) => transition(id, 'COLLECTED'),
+
     isShopOpen: (slug) => shopOpen[slug] ?? true,
     toggleShopOpen: (slug) => setShopOpen((p) => ({ ...p, [slug]: !(p[slug] ?? true) })),
-    resetDemoOrders: () => setOrders(seedAllOrders()),
 
     // ── catalog (shopkeeper's own view — exact prices) ──────────────────
     catalogForShop: (slug) => catalog[slug] || [],
@@ -187,10 +267,9 @@ export function StoreProvider({ children }) {
       })),
     removeCatalogItem: (slug, id) =>
       setCatalog((c) => ({ ...c, [slug]: (c[slug] || []).filter((it) => it.id !== id) })),
-    resetDemoCatalog: (slug) =>
-      setCatalog((c) => ({ ...c, [slug]: demoInventoryFull(slug) })),
+    resetDemoCatalog: (slug) => setCatalog((c) => ({ ...c, [slug]: demoInventoryFull(slug) })),
 
-    // ── cart (single shop only, spec motto) + place order ───────────────
+    // ── cart (single shop only, spec motto) ────────────────────────────
     // A line carries how it's sold so the pickup slip is unambiguous:
     //   { id, name, name_ta, pack_size, unit_price, qty,
     //     sell_by, unit, price_basis, base_unit, min_qty, max_qty, step_qty }
@@ -217,39 +296,6 @@ export function StoreProvider({ children }) {
           .filter((l) => l.qty > 0),
       })),
     clearCart: (slug) => setCart((c) => ({ ...c, [slug]: [] })),
-    /** Demo checkout: push a PENDING order the shopkeeper dashboard will see. */
-    placeOrder: (slug, { customerName = 'Demo shopper', customerPhone = '+9198••••0000', pickup = 'ASAP' } = {}) => {
-      const lines = cart[slug] || [];
-      if (!lines.length) return null;
-      const order = {
-        id: `o${Date.now()}`,
-        order_code: newOrderCode(),
-        shop_slug: slug,
-        shop_name: (demoShop(slug) || myShop || {}).shop_name || slug,
-        status: 'PENDING_ACCEPTANCE',
-        created_at: new Date().toISOString(),
-        pending_acceptance_at: new Date().toISOString(),
-        mine: true,
-        customer_name: customerName,
-        customer_phone: customerPhone,
-        pickup_slot_label: pickup,
-        items: lines.map((l) => ({
-          name: l.name,
-          name_ta: l.name_ta || null,
-          pack_size: l.pack_size || null,
-          quantity: l.qty,
-          unit_price: l.unit_price || 0,
-          sell_by: l.sell_by || 'pack',
-          unit: l.unit || (l.sell_by === 'weight' ? l.base_unit || 'kg' : l.sell_by === 'piece' ? 'pcs' : 'pack'),
-          price_basis: l.price_basis || 'per_pack',
-          line_total: Math.round((l.unit_price || 0) * l.qty * 100) / 100,
-        })),
-        subtotal_amount: Math.round(lines.reduce((s, l) => s + (l.unit_price || 0) * l.qty, 0) * 100) / 100,
-      };
-      setOrders((prev) => [order, ...prev]);
-      setCart((c) => ({ ...c, [slug]: [] }));
-      return order;
-    },
   };
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

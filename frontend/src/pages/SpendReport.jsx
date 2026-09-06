@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ChevronLeft, FileDown, Lock, Check, Store } from 'lucide-react';
 import { useI18n } from '../i18n/index.jsx';
@@ -17,9 +17,13 @@ const dateLabel = (iso, lang) =>
 export function SpendReport({ user }) {
   const { t, lang } = useI18n();
   const navigate = useNavigate();
-  const { spendReport, reportUnlocked, unlockSpendReport } = useStore();
+  const { spendReport, refreshMyOrders, reportUnlocked, unlockSpendReport } = useStore();
   const r = spendReport();
   const [paid, setPaid] = useState(null);
+
+  useEffect(() => {
+    refreshMyOrders();
+  }, [refreshMyOrders]);
 
   return (
     <div className="min-h-screen pb-24">

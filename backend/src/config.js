@@ -38,7 +38,8 @@ const schema = z.object({
 
   MSG91_AUTH_KEY: z.string().optional().default(''),
   MSG91_SENDER_ID: z.string().optional().default(''),
-  MSG91_TEMPLATE_ID: z.string().optional().default(''),
+  MSG91_TEMPLATE_ID: z.string().optional().default(''), // OTP template
+  MSG91_REJECT_TEMPLATE_ID: z.string().optional().default(''), // "order rejected" template
 
   CORS_ORIGINS: z
     .string()

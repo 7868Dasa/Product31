@@ -24,7 +24,21 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
       updated (rice/dal/sugar per kg, oil per l, coconut per piece). Backend
       `publicInventoryItem` emits the fields. Frontend + voice consume them.
       Deferred: shopkeeper weight-stepper UI (with build step 6).
-- [ ] 4. Order state machine + background SLA/no-show jobs + notifications
+- [~] 4. Order state machine (Direction B — scoped down, see plan-eng-review).
+      **Done:** pure forward-only state machine in `lib/orderState.js` (shared
+      byte-identical with the frontend, parity-tested); backend `orders` module
+      (`POST /shops/:slug/orders` with idempotency key + server-side price
+      recompute, `GET /shops/:slug/orders` owner-only queue, `GET /orders/mine`,
+      `GET /orders/:id`, `POST /orders/:id/transitions` with actor + legal-
+      transition guards + `order_status_history`); **lazy expiry** (a stale
+      PENDING order flips to EXPIRED on the next read — no worker); reject → one
+      best-effort SMS via MSG91 (`MSG91_REJECT_TEMPLATE_ID`); migration `0008`
+      scopes `order_code` unique per (shop, day). Frontend `store.jsx` order
+      methods now call the API; `mockApi.js` serves them in demo mode; Orders
+      page polls while an order is active + refetches on focus; shopkeeper
+      dashboard polls the queue. **Deferred:** background SLA/no-show worker
+      (lazy expiry covers the pilot), FCM push (poll + reject-SMS instead),
+      atomic stock decrement (reject-with-reason is the safety net).
 - [~] 5. Shopkeeper self-service onboarding (§5). Backend: `POST /shops`
       (authed, mints non-guessable slug, `qr_generated_at`), `GET /shops/mine`,
       migration `0004` (opening_hours). Frontend demo: phone-OTP → shop-details

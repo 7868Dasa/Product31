@@ -59,7 +59,9 @@ export function OrderCard({ order, slaMinutes = 5, onAccept, onReject, onReady, 
               {lang === 'ta' && it.name_ta ? it.name_ta : it.name}{' '}
               <span className="text-ink-soft">{it.pack_size}</span>
             </span>
-            <span className="tabular-nums text-ink-soft">₹{it.unit_price * it.quantity}</span>
+            <span className="tabular-nums text-ink-soft">
+              ₹{it.line_total || Math.round((it.unit_price || 0) * it.quantity)}
+            </span>
           </li>
         ))}
       </ul>
@@ -67,8 +69,9 @@ export function OrderCard({ order, slaMinutes = 5, onAccept, onReject, onReady, 
       <div className="mt-3 flex items-center justify-between border-t border-sand pt-3 text-sm">
         <span className="text-ink-soft">
           {t('sk.customer')}: <span className="font-semibold text-ink">{order.customer_name}</span>
-          {' · '}
-          {order.customer_phone}
+          {(order.customer_phone_masked || order.customer_phone) && (
+            <> · {order.customer_phone_masked || order.customer_phone}</>
+          )}
         </span>
       </div>
       <div className="flex items-center justify-between text-base font-bold">

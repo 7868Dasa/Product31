@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import { Printer, ArrowLeft } from 'lucide-react';
 import { useI18n } from '../i18n/index.jsx';
@@ -20,7 +21,11 @@ const fmtDate = (iso, lang) =>
  */
 export function SpendReportPrint({ user }) {
   const { t, lang } = useI18n();
-  const { spendReport, reportUnlocked } = useStore();
+  const { spendReport, refreshMyOrders, reportUnlocked } = useStore();
+
+  useEffect(() => {
+    refreshMyOrders();
+  }, [refreshMyOrders]);
 
   if (!reportUnlocked) return <Navigate to="/orders/report" replace />;
   const r = spendReport();

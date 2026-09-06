@@ -24,6 +24,22 @@ export function CartBar({ shop }) {
   const lines = cartForShop(shop.slug);
   const [open, setOpen] = useState(false);
   const [placed, setPlaced] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+
+  async function submit() {
+    setBusy(true);
+    setErr(null);
+    try {
+      const order = await placeOrder(shop.slug);
+      setPlaced(order);
+      setOpen(false);
+    } catch (e) {
+      setErr(e && e.message ? e.message : t('error.generic'));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const total = lines.reduce((s, l) => s + lineTotal(l), 0);
   if (lines.length === 0 && !placed) return null;
@@ -53,17 +69,17 @@ export function CartBar({ shop }) {
           onClose={() => setOpen(false)}
           footer={
             <button
-              onClick={() => {
-                setPlaced(placeOrder(shop.slug));
-                setOpen(false);
-              }}
-              disabled={lines.length === 0}
+              onClick={submit}
+              disabled={lines.length === 0 || busy}
               className="flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3.5 text-lg font-semibold text-white active:bg-primary-dark disabled:opacity-50"
             >
-              {t('cart.place')}
+              {busy ? t('cart.placing') : t('cart.place')}
             </button>
           }
         >
+          {err && (
+            <p className="mb-2 rounded-lg bg-stop/10 px-3 py-2 text-sm font-semibold text-stop">{err}</p>
+          )}
           <ul className="divide-y divide-sand">
             {lines.map((l) => (
               <li key={l.id} className="flex items-center gap-2 py-3">
