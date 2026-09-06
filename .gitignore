@@ -1,0 +1,30 @@
+# deps
+node_modules/
+*/node_modules/
+
+# env / secrets — never commit real values (spec §8)
+.env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env
+
+# build output
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# uploads (local dev image store, spec §7)
+backend/storage/uploads/
+!backend/storage/uploads/.gitkeep
+
+# logs
+*.log
+npm-debug.log*
+
+# editor / os
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

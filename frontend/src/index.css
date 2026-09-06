@@ -1,0 +1,52 @@
+@import 'tailwindcss';
+
+/*
+ * Blend palette: violet primary actions (premium SaaS feel) on warm
+ * stone-neutral surfaces (still warm, still high-contrast for outdoor phone
+ * use and older eyes). Big tap targets and plain layout are kept from the
+ * primary spec §2.
+ */
+@theme {
+  --color-cream: #faf8f5; /* warm off-white ground */
+  --color-sand: #e7e2db; /* warm border / subtle surface */
+  --color-ink: #1c1917; /* stone-900 */
+  --color-ink-soft: #57534e; /* stone-600 */
+
+  --color-primary: #7c3aed; /* violet-600 */
+  --color-primary-dark: #6d28d9; /* violet-700 */
+  --color-primary-tint: #ede9fe; /* violet-100 */
+
+  --color-go: #15803d;
+  --color-stop: #b91c1c;
+  --color-warn: #b45309; /* amber-700, for countdowns / low stock */
+
+  --font-sans: 'Noto Sans', 'Noto Sans Tamil', system-ui, -apple-system, sans-serif;
+
+  --radius-xl2: 1.5rem; /* 24px — large card radius */
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-cream);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 1.0625rem; /* 17px base */
+  line-height: 1.5;
+}
+
+/* Every interactive element clears the 48px minimum target (spec §2). */
+button,
+a.btn,
+input,
+select {
+  min-height: 3rem;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
