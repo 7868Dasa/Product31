@@ -22,6 +22,15 @@ describe('generic-token false positives (§9.6) — "if not available, say no"',
   it('"washing powder" -> not_found', () => {
     expect(matchLine('washing powder', CATALOG, { lang: 'en' }).needs).toBe('not_found');
   });
+
+  it('typo / mis-hear "chickween masala" still matches Aachi Chicken Masala', () => {
+    const line = matchLine('chickween masala', CATALOG, { lang: 'en' });
+    expect(line.needs).not.toBe('not_found');
+  });
+
+  it('"chiken masala 100g" (missing letter) resolves', () => {
+    expect(matchLine('chiken masala 100g', CATALOG, { lang: 'en' }).matched_product_id).toBe('a100');
+  });
 });
 
 describe('real items still match', () => {

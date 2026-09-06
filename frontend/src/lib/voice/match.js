@@ -17,6 +17,8 @@ import {
   normalizePackSize,
   toBaseUnit,
 } from './normalize.js';
+import { phoneticEq } from './phonetics.js';
+import { applySynonyms } from './synonyms.js';
 
 // ── fuzzy string similarity ────────────────────────────────────────────
 export function levenshtein(a, b) {
@@ -50,7 +52,10 @@ export function similarity(a, b) {
 function bestTokenHit(token, haystackTokens) {
   let best = 0;
   for (const h of haystackTokens) {
-    const s = similarity(token, h);
+    let s = similarity(token, h);
+    // Layer 1: a phonetic match counts as a strong hit even if the letters
+    // are off ("chickween" ≡ "chicken", "aachy" ≡ "aachi").
+    if (s < 0.85 && phoneticEq(token, h)) s = Math.max(s, 0.9);
     if (s > best) best = s;
     if (best === 1) break;
   }
@@ -80,9 +85,13 @@ export function scoreItem(queryTokens, item) {
 
   // Guard against matches carried by one generic shared word
   // ("briyani masala" ~ "... masala", "parle g biscuit" ~ "marie biscuit").
+  // A word "covers" the item at 0.66 similarity — loose enough to keep a
+  // near-miss / typo ("chickween" ~ "chicken" ≈ 0.78) but tight enough that
+  // real noise ("briyani" ~ "chicken" ≈ 0.14, "parle" ~ "marie" ≈ 0.60)
+  // still fails. Multi-word queries need most words to cover.
   if (queryTokens.length > 1) {
-    const strongFraction = hits.filter((h) => h >= 0.8).length / queryTokens.length;
-    if (strongFraction < 0.6) score *= 0.35;
+    const covered = hits.filter((h) => h >= 0.66).length / queryTokens.length;
+    if (covered < 0.6) score *= 0.35;
   }
   return score;
 }
@@ -182,7 +191,8 @@ function clarify(needs, query, count, extra = {}) {
  *   needs ∈ null | 'pack_size' | 'quantity' | 'not_found' | 'out_of_stock'
  */
 export function matchLine(transcript, catalog, { lang = 'en' } = {}) {
-  const raw = tokenize(transcript);
+  // Layer 2: rewrite language aliases ("paruppu" → "toor dal") before matching.
+  const raw = tokenize(applySynonyms(transcript));
   const { count, weight, tokens: afterAmount } = extractAmount(raw);
   const queryTokens = stripFillers(afterAmount);
   const query = queryTokens.join(' ');

@@ -4,7 +4,7 @@ import { publicUser } from './auth.service.js';
 const ctxOf = (req) => ({ ip: req.ip, userAgent: req.get('user-agent') || '' });
 
 export async function requestOtp(req, res) {
-  const result = await service.requestOtp(req.body);
+  const result = await service.requestOtp(req.body, ctxOf(req));
   res.status(201).json(result);
 }
 
@@ -19,7 +19,7 @@ export async function refresh(req, res) {
 }
 
 export async function logout(req, res) {
-  await service.revokeRefreshToken(req.body.refresh_token);
+  await service.revokeRefreshToken(req.body.refresh_token, ctxOf(req));
   res.status(204).end();
 }
 

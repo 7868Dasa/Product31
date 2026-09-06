@@ -1,0 +1,6 @@
+# Product 31 — security contact (draft; replace [DOMAIN] before launch)
+Contact: mailto:security@[DOMAIN]
+Preferred-Languages: en, ta
+Canonical: https://[DOMAIN]/.well-known/security.txt
+Policy: https://[DOMAIN]/legal/security
+Expires: 2027-01-01T00:00:00.000Z

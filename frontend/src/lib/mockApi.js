@@ -89,6 +89,9 @@ function makeUser(phone) {
     is_phone_verified: true,
     preferred_language: 'en',
     status: 'active',
+    consent_version: null, // → triggers the consent screen on first sign-in
+    location_consent: false,
+    marketing_consent: false,
     created_at: new Date().toISOString(),
   };
 }
@@ -183,6 +186,42 @@ export async function mockApi(path, { method = 'GET', body } = {}) {
     const shop = demoShop(shopMatch[1]) || myShopBySlug(shopMatch[1]);
     if (!shop) throw new MockError(404, 'SHOP_NOT_FOUND', 'That shop could not be found.');
     return { shop };
+  }
+
+  // ── account rights (DPDP): consent, export, delete ──────────────────
+  if (pathname === '/users/me/consent' && method === 'POST') {
+    const u = loadUser();
+    if (!u) throw new MockError(401, 'UNAUTHORIZED', 'Authentication required');
+    const next = {
+      ...u,
+      consent_version: body?.consent_version || null,
+      location_consent: !!body?.location,
+      marketing_consent: !!body?.marketing,
+    };
+    saveUser(next);
+    return { user: next };
+  }
+
+  if (pathname === '/users/me/export' && method === 'GET') {
+    const u = loadUser();
+    if (!u) throw new MockError(401, 'UNAUTHORIZED', 'Authentication required');
+    return {
+      exported_at: new Date().toISOString(),
+      profile: u,
+      consents: [],
+      orders: [],
+      order_items: [],
+      wishlist: [],
+      notifications: [],
+      security_events: [],
+      _note: 'Demo export — the real backend returns your full order & consent history.',
+    };
+  }
+
+  if (pathname === '/users/me' && method === 'DELETE') {
+    if (body?.confirm !== 'DELETE') throw new MockError(400, 'VALIDATION_ERROR', 'Type DELETE to confirm.');
+    localStorage.removeItem(USER_KEY);
+    return null;
   }
 
   if (pathname === '/auth/otp/request' && method === 'POST') {

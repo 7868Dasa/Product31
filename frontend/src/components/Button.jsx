@@ -9,13 +9,15 @@ export function Button({ children, icon: Icon, variant = 'primary', className = 
     ghost: 'bg-white text-ink border-2 border-sand active:bg-sand disabled:opacity-50',
     danger: 'bg-white text-stop border-2 border-stop/40 active:bg-stop/10 disabled:opacity-50',
   };
+  // string / emoji → text; anything else truthy (a component, incl. lucide's
+  // forwardRef objects) → render as an element.
   const renderIcon =
-    typeof Icon === 'function' ? (
-      <Icon size={22} strokeWidth={2.25} aria-hidden="true" />
-    ) : Icon ? (
+    typeof Icon === 'string' ? (
       <span aria-hidden="true" className="text-xl leading-none">
         {Icon}
       </span>
+    ) : Icon ? (
+      <Icon size={22} strokeWidth={2.25} aria-hidden="true" />
     ) : null;
 
   return (

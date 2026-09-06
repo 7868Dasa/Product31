@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { UserRound, LogIn, ArrowLeftRight } from 'lucide-react';
+import { UserRound, LogIn, ArrowLeftRight, ReceiptText } from 'lucide-react';
 import { useI18n } from '../i18n/index.jsx';
 import { LangToggle } from './LangToggle.jsx';
 
@@ -12,6 +12,13 @@ export function TopBar({ user }) {
       </Link>
       <div className="flex items-center gap-2">
         <LangToggle />
+        <Link
+          to="/orders"
+          aria-label={t('nav.orders')}
+          className="inline-flex items-center gap-1 rounded-full border-2 border-sand bg-white px-3 py-2 text-sm font-semibold text-ink-soft active:bg-sand"
+        >
+          <ReceiptText size={16} />
+        </Link>
         <Link
           to="/"
           className="inline-flex items-center gap-1 rounded-full border-2 border-sand bg-white px-3 py-2 text-sm font-semibold text-ink-soft active:bg-sand"

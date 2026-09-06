@@ -5,6 +5,7 @@ import { useStore } from '../../store.jsx';
 import { asrSupported, createRecognizer } from '../../lib/voice/asr.js';
 import { createSession, ingest } from '../../lib/voice/session.js';
 import { ttsSupported, primeVoices, canSpeak, speak, cancelSpeech } from '../../lib/voice/tts.js';
+import { logVoiceMiss } from '../../lib/voice/misses.js';
 
 const MUTE_KEY = 'p31.voice.muted';
 
@@ -95,6 +96,7 @@ export function VoiceOrder({ shop, items }) {
       const ci = lineToCartItem(line);
       if (ci) addToCart(shop.slug, ci);
     });
+    (res.unmatched || []).forEach((seg) => logVoiceMiss(seg, shop.slug, lang));
     setLines([...session.lines]);
     if (!muted && res.spoken) speak(res.spoken, lang);
   }

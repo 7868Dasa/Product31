@@ -5,9 +5,12 @@
  * steps 3-6 land; the component API here is meant to survive that swap.
  */
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { seedDemoOrders } from './lib/demoOrders.js';
+import { seedDemoOrders, seedMyDemoOrders } from './lib/demoOrders.js';
 import { demoInventoryFull, demoShop } from './lib/mockData.js';
 import { catalogKey } from './lib/csv.js';
+import { buildSpendReport } from './lib/spend.js';
+
+const seedAllOrders = () => [...seedMyDemoOrders(), ...seedDemoOrders()];
 
 const StoreContext = createContext(null);
 
@@ -17,6 +20,7 @@ const SHOPSTATE_KEY = 'p31.demo.shopstate';
 const CATALOG_KEY = 'p31.demo.catalog';
 const MYSHOP_KEY = 'p31.demo.myshop';
 const CART_KEY = 'p31.demo.cart';
+const REPORT_KEY = 'p31.demo.report_unlocked';
 
 const ORDER_ALPHABET = '23456789ABCDEFGHJKMNPQRSTVWXYZ';
 const newOrderCode = () =>
@@ -59,14 +63,16 @@ const STAMP = {
 
 export function StoreProvider({ children }) {
   const [role, setRole] = useState(() => load(ROLE_KEY, null));
-  const [orders, setOrders] = useState(() => load(ORDERS_KEY, null) || seedDemoOrders());
+  const [orders, setOrders] = useState(() => load(ORDERS_KEY, null) || seedAllOrders());
   const [shopOpen, setShopOpen] = useState(() => load(SHOPSTATE_KEY, { [DEMO_SHOP_SLUG]: true }));
   const [catalog, setCatalog] = useState(
     () => load(CATALOG_KEY, null) || { [DEMO_SHOP_SLUG]: demoInventoryFull(DEMO_SHOP_SLUG) },
   );
   const [myShop, setMyShop] = useState(() => load(MYSHOP_KEY, null));
   const [cart, setCart] = useState(() => load(CART_KEY, {}));
+  const [reportUnlocked, setReportUnlocked] = useState(() => load(REPORT_KEY, false));
 
+  useEffect(() => save(REPORT_KEY, reportUnlocked), [reportUnlocked]);
   useEffect(() => save(ROLE_KEY, role), [role]);
   useEffect(() => save(ORDERS_KEY, orders), [orders]);
   useEffect(() => save(SHOPSTATE_KEY, shopOpen), [shopOpen]);
@@ -136,13 +142,39 @@ export function StoreProvider({ children }) {
     clearMyShop: () => setMyShop(null),
     orders,
     ordersForShop: (slug) => orders.filter((o) => o.shop_slug === slug),
+    /** Shopper's own orders across EVERY shop, newest first. */
+    myOrders: () =>
+      orders.filter((o) => o.mine).sort((a, b) => new Date(b.created_at) - new Date(a.created_at)),
+    /** Free: the spending report data over the shopper's own orders. */
+    spendReport: () => buildSpendReport(orders),
+    reportUnlocked,
+    /** Demo: simulate the one-time ₹29 unlock (no real charge). */
+    unlockSpendReport: () => {
+      setReportUnlocked(true);
+      return { unlocked: true, amount: 29, currency: 'INR', demo: true, at: new Date().toISOString() };
+    },
+    /** Put a past order's lines back in that shop's cart. */
+    buyAgain: (order) => {
+      const lines = (order.items || []).map((it, i) => ({
+        id: `${order.shop_slug}-again-${i}-${Date.now()}`,
+        name: it.name,
+        name_ta: it.name_ta || null,
+        pack_size: it.pack_size || null,
+        unit_price: it.unit_price || 0,
+        qty: it.quantity,
+        sell_by: it.sell_by || 'pack',
+        unit: it.unit || 'pack',
+      }));
+      setCart((c) => ({ ...c, [order.shop_slug]: lines }));
+      return order.shop_slug;
+    },
     acceptOrder: (id) => transition(id, 'ACCEPTED'),
     rejectOrder: (id, reason) => transition(id, 'REJECTED', { rejection_reason: reason || 'Item not available' }),
     markReady: (id) => transition(id, 'READY_FOR_PICKUP'),
     markCollected: (id) => transition(id, 'COLLECTED'),
     isShopOpen: (slug) => shopOpen[slug] ?? true,
     toggleShopOpen: (slug) => setShopOpen((p) => ({ ...p, [slug]: !(p[slug] ?? true) })),
-    resetDemoOrders: () => setOrders(seedDemoOrders()),
+    resetDemoOrders: () => setOrders(seedAllOrders()),
 
     // ── catalog (shopkeeper's own view — exact prices) ──────────────────
     catalogForShop: (slug) => catalog[slug] || [],
@@ -193,9 +225,11 @@ export function StoreProvider({ children }) {
         id: `o${Date.now()}`,
         order_code: newOrderCode(),
         shop_slug: slug,
+        shop_name: (demoShop(slug) || myShop || {}).shop_name || slug,
         status: 'PENDING_ACCEPTANCE',
         created_at: new Date().toISOString(),
         pending_acceptance_at: new Date().toISOString(),
+        mine: true,
         customer_name: customerName,
         customer_phone: customerPhone,
         pickup_slot_label: pickup,

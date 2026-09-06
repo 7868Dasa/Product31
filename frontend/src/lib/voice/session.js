@@ -80,6 +80,7 @@ function emit(session, replyParts, extra = {}) {
     options: session.pending?.options || [],
     resolvedLines: extra.resolvedLines || [],
     resolvedLine: (extra.resolvedLines || []).slice(-1)[0] || null,
+    unmatched: extra.unmatched || [], // segments that matched nothing — feed misses.js
     done: false,
   };
 }
@@ -121,11 +122,13 @@ export function ingest(session, transcript, catalog) {
   const resolved = [];
   const clarifications = [];
   const notes = [];
+  const unmatched = [];
 
   for (const seg of segments) {
     const line = matchLine(seg, catalog, { lang: session.lang });
     if (line.needs === 'not_found') {
       notes.push(notFoundNote(seg, session.lang));
+      unmatched.push(seg);
     } else if (line.needs === 'out_of_stock') {
       notes.push(oosNote(seg, session.lang));
     } else if (line.needs === 'pack_size' || line.needs === 'quantity') {
@@ -155,7 +158,7 @@ export function ingest(session, transcript, catalog) {
   return emit(
     session,
     [addedSummary(resolved, catalog, session.lang), notes.join(' '), tail],
-    { resolvedLines: resolved },
+    { resolvedLines: resolved, unmatched },
   );
 }
 

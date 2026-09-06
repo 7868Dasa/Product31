@@ -1,10 +1,73 @@
 /**
- * Seed orders for the demo shopkeeper (owns Sri Murugan Stores / MRGNKLKI).
- * Real orders arrive from the backend once build steps 3-4 are done; this
- * feeds the shopkeeper dashboard in VITE_DEMO mode.
+ * Seed orders. Most feed the shopkeeper dashboard (Sri Murugan Stores).
+ * A few are marked `mine: true` and spread across DIFFERENT shops so the
+ * shopper's unified "My orders" screen has something to show.
  */
 const now = Date.now();
 const ago = (min) => new Date(now - min * 60_000).toISOString();
+
+export function seedMyDemoOrders() {
+  return [
+    {
+      id: 'my1',
+      order_code: 'T7Q2',
+      shop_slug: 'AMMAKLKI',
+      shop_name: 'Amma Super Mart',
+      status: 'READY_FOR_PICKUP',
+      created_at: ago(20),
+      pending_acceptance_at: ago(20),
+      accepted_at: ago(18),
+      ready_at: ago(4),
+      mine: true,
+      customer_name: 'You',
+      customer_phone: '+9198••••0000',
+      pickup_slot_label: 'ASAP',
+      items: [
+        { name: 'Aavin Milk', name_ta: 'ஆவின் பால்', pack_size: '500ml', quantity: 2, unit_price: 27, sell_by: 'pack', unit: 'pack' },
+        { name: 'Sugar', name_ta: 'சர்க்கரை', pack_size: null, quantity: 1, unit_price: 44, sell_by: 'weight', unit: 'kg' },
+      ],
+      subtotal_amount: 98,
+    },
+    {
+      id: 'my2',
+      order_code: 'F5N8',
+      shop_slug: 'GNSHKLKI',
+      shop_name: 'New Ganesh Traders',
+      status: 'COLLECTED',
+      created_at: ago(2880),
+      pending_acceptance_at: ago(2880),
+      accepted_at: ago(2878),
+      ready_at: ago(2870),
+      collected_at: ago(2860),
+      mine: true,
+      customer_name: 'You',
+      customer_phone: '+9198••••0000',
+      pickup_slot_label: 'ASAP',
+      items: [
+        { name: 'Toor Dal', name_ta: 'துவரம் பருப்பு', pack_size: null, quantity: 2, unit_price: 138, sell_by: 'weight', unit: 'kg' },
+        { name: 'Sunflower Oil', name_ta: 'சூரியகாந்தி எண்ணெய்', pack_size: null, quantity: 1, unit_price: 149, sell_by: 'weight', unit: 'l' },
+      ],
+      subtotal_amount: 425,
+    },
+    {
+      id: 'my3',
+      order_code: 'B4K9',
+      shop_slug: 'MRGNKLKI',
+      shop_name: 'Sri Murugan Stores',
+      status: 'COLLECTED',
+      created_at: ago(5760),
+      collected_at: ago(5740),
+      mine: true,
+      customer_name: 'You',
+      customer_phone: '+9198••••0000',
+      pickup_slot_label: 'ASAP',
+      items: [
+        { name: 'Marie Biscuit', name_ta: 'மேரி பிஸ்கட்', pack_size: '150g', quantity: 3, unit_price: 30, sell_by: 'pack', unit: 'pack' },
+      ],
+      subtotal_amount: 90,
+    },
+  ];
+}
 
 export function seedDemoOrders() {
   return [

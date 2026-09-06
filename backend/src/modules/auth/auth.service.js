@@ -9,6 +9,7 @@ import { badRequest, tooManyRequests, unauthorized } from '../../lib/errors.js';
 import { hashOtp, otpMatches } from '../../lib/otp.js';
 import { newOtpCode } from '../../lib/ids.js';
 import { sendOtpSms } from '../../lib/sms.js';
+import { recordSecurityEvent } from '../../lib/audit.js';
 import {
   signAccessToken,
   createRefreshToken,
@@ -27,6 +28,9 @@ const PUBLIC_USER_COLUMNS = [
   'is_phone_verified',
   'preferred_language',
   'status',
+  'consent_version',
+  'location_consent',
+  'marketing_consent',
   'created_at',
 ];
 
@@ -51,8 +55,20 @@ async function assertRequestRateOk(phone) {
   }
 }
 
-export async function requestOtp({ phone_number, purpose }) {
-  await assertRequestRateOk(phone_number);
+export async function requestOtp({ phone_number, purpose }, ctx = {}) {
+  try {
+    await assertRequestRateOk(phone_number);
+  } catch (err) {
+    await recordSecurityEvent({
+      eventType: 'otp.requested',
+      phone: phone_number,
+      ip: ctx.ip,
+      userAgent: ctx.userAgent,
+      outcome: 'rate_limited',
+      detail: { purpose },
+    });
+    throw err;
+  }
 
   const code = newOtpCode(6);
   const expiresAt = new Date(Date.now() + config.OTP_TTL_SECONDS * 1000);
@@ -71,10 +87,24 @@ export async function requestOtp({ phone_number, purpose }) {
     ({ channel } = await sendOtpSms(phone_number, code));
   } catch (err) {
     logger.error({ err, phone: maskPhone(phone_number) }, 'OTP send failed');
+    await recordSecurityEvent({
+      eventType: 'otp.send_failed',
+      phone: phone_number,
+      ip: ctx.ip,
+      userAgent: ctx.userAgent,
+      outcome: 'failure',
+    });
     throw badRequest('OTP_SEND_FAILED', 'Could not send the code right now. Please try again.');
   }
 
   logger.info({ phone: maskPhone(phone_number), purpose, channel }, 'OTP issued');
+  await recordSecurityEvent({
+    eventType: 'otp.requested',
+    phone: phone_number,
+    ip: ctx.ip,
+    userAgent: ctx.userAgent,
+    detail: { purpose, channel },
+  });
 
   return {
     request_id: row.id,
@@ -90,21 +120,38 @@ export async function verifyOtp({ phone_number, otp_code }, ctx = {}) {
     .orderBy('created_at', 'desc')
     .first();
 
-  if (!record) throw badRequest('OTP_NOT_FOUND', 'Request a new code.');
+  const fail = async (code, msg, { outcome = 'failure', status = 400 } = {}) => {
+    await recordSecurityEvent({
+      eventType: 'otp.verify_failed',
+      phone: phone_number,
+      ip: ctx.ip,
+      userAgent: ctx.userAgent,
+      outcome,
+      detail: { code },
+    });
+    return status === 429
+      ? tooManyRequests(code, msg)
+      : badRequest(code, msg);
+  };
+
+  if (!record) throw await fail('OTP_NOT_FOUND', 'Request a new code.');
 
   if (new Date(record.expires_at).getTime() < Date.now()) {
-    throw badRequest('OTP_EXPIRED', 'That code has expired. Request a new one.');
+    throw await fail('OTP_EXPIRED', 'That code has expired. Request a new one.');
   }
 
   if (record.attempt_count >= config.OTP_MAX_VERIFY_ATTEMPTS) {
     // burn it so it can't be brute-forced further (spec §8)
     await db('otp_verifications').where({ id: record.id }).update({ is_used: true });
-    throw tooManyRequests('OTP_ATTEMPTS_EXCEEDED', 'Too many wrong attempts. Request a new code.');
+    throw await fail('OTP_ATTEMPTS_EXCEEDED', 'Too many wrong attempts. Request a new code.', {
+      outcome: 'rate_limited',
+      status: 429,
+    });
   }
 
   if (!otpMatches(otp_code, record.otp_hash)) {
     await db('otp_verifications').where({ id: record.id }).increment('attempt_count', 1);
-    throw badRequest('OTP_INVALID', 'That code is not correct.');
+    throw await fail('OTP_INVALID', 'That code is not correct.');
   }
 
   // success — consume the OTP
@@ -127,6 +174,13 @@ export async function verifyOtp({ phone_number, otp_code }, ctx = {}) {
   }
 
   const tokens = await issueTokens(user, ctx);
+  await recordSecurityEvent({
+    eventType: isNewUser ? 'auth.signup' : 'auth.login',
+    userId: user.id,
+    phone: phone_number,
+    ip: ctx.ip,
+    userAgent: ctx.userAgent,
+  });
   return { ...tokens, user: publicUser(user), is_new_user: isNewUser };
 }
 
@@ -157,23 +211,50 @@ export async function rotateRefreshToken(rawToken, ctx = {}) {
   const row = await db('refresh_tokens').where({ token_hash: hash }).first();
 
   if (!row || row.revoked_at || new Date(row.expires_at).getTime() < Date.now()) {
+    await recordSecurityEvent({
+      eventType: 'token.refresh_invalid',
+      ip: ctx.ip,
+      userAgent: ctx.userAgent,
+      outcome: 'failure',
+    });
     throw unauthorized('REFRESH_INVALID', 'Please sign in again.');
   }
 
   const user = await db('users').where({ id: row.user_id }).first();
   if (!user || user.status !== 'active') {
+    await recordSecurityEvent({
+      eventType: 'token.refresh_invalid',
+      userId: row.user_id,
+      ip: ctx.ip,
+      userAgent: ctx.userAgent,
+      outcome: 'failure',
+      detail: { reason: user ? user.status : 'user_gone' },
+    });
     throw unauthorized('REFRESH_INVALID', 'Please sign in again.');
   }
 
   await db('refresh_tokens').where({ id: row.id }).update({ revoked_at: db.fn.now() });
   const tokens = await issueTokens(user, ctx);
+  await recordSecurityEvent({
+    eventType: 'token.refreshed',
+    userId: user.id,
+    ip: ctx.ip,
+    userAgent: ctx.userAgent,
+  });
   return { ...tokens, user: publicUser(user) };
 }
 
-export async function revokeRefreshToken(rawToken) {
+export async function revokeRefreshToken(rawToken, ctx = {}) {
   const hash = hashRefreshToken(rawToken);
+  const row = await db('refresh_tokens').where({ token_hash: hash }).first();
   await db('refresh_tokens')
     .where({ token_hash: hash })
     .andWhere({ revoked_at: null })
     .update({ revoked_at: db.fn.now() });
+  await recordSecurityEvent({
+    eventType: 'auth.logout',
+    userId: row?.user_id ?? null,
+    ip: ctx.ip,
+    userAgent: ctx.userAgent,
+  });
 }
