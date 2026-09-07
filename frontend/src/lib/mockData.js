@@ -18,15 +18,22 @@ const P = {
   sugar: { name: 'Sugar', name_ta: 'சர்க்கரை', brand: null, category: 'Essentials', unit: 'kg', icon: '🍬', sell_by: 'weight', base_unit: 'kg' },
   oil: { name: 'Sunflower Oil', name_ta: 'சூரியகாந்தி எண்ணெய்', brand: null, category: 'Oil & Ghee', unit: 'l', icon: '🛢️', sell_by: 'weight', base_unit: 'l' },
   coconut: { name: 'Coconut', name_ta: 'தேங்காய்', brand: null, category: 'Fresh', unit: 'pcs', icon: '🥥', sell_by: 'piece', base_unit: 'pcs' },
+  bread: { name: 'Milk Bread', name_ta: 'மில்க் பிரெட்', brand: 'Modern', category: 'Bakery', unit: 'g', icon: '🍞', sell_by: 'pack', base_unit: 'pcs' },
+  bun: { name: 'Cream Bun', name_ta: 'கிரீம் பன்', brand: null, category: 'Bakery', unit: 'pcs', icon: '🥐', sell_by: 'piece', base_unit: 'pcs' },
+  cake: { name: 'Plum Cake Slice', name_ta: 'பிளம் கேக்', brand: null, category: 'Bakery', unit: 'pcs', icon: '🍰', sell_by: 'piece', base_unit: 'pcs' },
+  teapowder: { name: 'Tea Powder', name_ta: 'தேயிலைத் தூள்', brand: null, category: 'Tea & Coffee', unit: 'kg', icon: '🍵', sell_by: 'weight', base_unit: 'kg' },
+  teacup: { name: 'Hot Tea', name_ta: 'சூடான டீ', brand: null, category: 'Tea & Coffee', unit: 'pcs', icon: '🫖', sell_by: 'piece', base_unit: 'pcs' },
 };
 
 export const DEMO_SHOPS = [
-  { slug: 'MRGNKLKI', shop_name: 'Sri Murugan Stores', owner_name: 'R. Murugan', category: 'Groceries', address: 'Gandhi Road, Kallakurichi', latitude: 11.7415, longitude: 78.9603, is_open: true, acceptance_sla_minutes: 5, pickup_hold_minutes: 90, price_display_mode: 'exact', price_mode: 'exact' },
+  { slug: 'MRGNKLKI', shop_name: 'Sri Murugan Stores', owner_name: 'R. Murugan', category: 'Kirana / Grocery', address: 'Gandhi Road, Kallakurichi', latitude: 11.7415, longitude: 78.9603, is_open: true, acceptance_sla_minutes: 5, pickup_hold_minutes: 90, price_display_mode: 'exact', price_mode: 'exact' },
   { slug: 'AMMAKLKI', shop_name: 'Amma Super Mart', owner_name: 'S. Selvi', category: 'Supermarket', address: 'Salem Main Road, Kallakurichi', latitude: 11.7365, longitude: 78.955, is_open: true, acceptance_sla_minutes: 5, pickup_hold_minutes: 90, price_display_mode: 'range', price_mode: 'range' },
-  { slug: 'LXMIKLKI', shop_name: 'Lakshmi Provisions', owner_name: 'K. Lakshmi', category: 'Provision Store', address: 'Bus Stand Road, Kallakurichi', latitude: 11.748, longitude: 78.967, is_open: false, acceptance_sla_minutes: 5, pickup_hold_minutes: 90, price_display_mode: 'hidden', price_mode: 'hidden' },
+  { slug: 'LXMIKLKI', shop_name: 'Lakshmi Provisions', owner_name: 'K. Lakshmi', category: 'Kirana / Grocery', address: 'Bus Stand Road, Kallakurichi', latitude: 11.748, longitude: 78.967, is_open: false, acceptance_sla_minutes: 5, pickup_hold_minutes: 90, price_display_mode: 'hidden', price_mode: 'hidden' },
   { slug: 'GNSHKLKI', shop_name: 'New Ganesh Traders', owner_name: 'V. Ganesan', category: 'Wholesale & Retail', address: 'Chinnasalem Road, Kallakurichi', latitude: 11.76, longitude: 78.972, is_open: true, acceptance_sla_minutes: 5, pickup_hold_minutes: 90, price_display_mode: 'exact', price_mode: 'exact' },
-  { slug: 'BRTIKLKI', shop_name: 'Bharathi Mini Mart', owner_name: 'M. Bharathi', category: 'Mini Mart', address: 'Ulundurpet Road, Kallakurichi', latitude: 11.715, longitude: 78.94, is_open: true, acceptance_sla_minutes: 5, pickup_hold_minutes: 90, price_display_mode: 'range', price_mode: 'range' },
-  { slug: 'KOVLKLKI', shop_name: 'Kovil Kadai', owner_name: 'P. Anand', category: 'Kirana', address: 'Melmalayanur Road', latitude: 11.81, longitude: 79.01, is_open: true, acceptance_sla_minutes: 5, pickup_hold_minutes: 90, price_display_mode: 'hidden', price_mode: 'hidden' },
+  { slug: 'BRTIKLKI', shop_name: 'Bharathi Mini Mart', owner_name: 'M. Bharathi', category: 'Supermarket', address: 'Ulundurpet Road, Kallakurichi', latitude: 11.715, longitude: 78.94, is_open: true, acceptance_sla_minutes: 5, pickup_hold_minutes: 90, price_display_mode: 'range', price_mode: 'range' },
+  { slug: 'KOVLKLKI', shop_name: 'Kovil Kadai', owner_name: 'P. Anand', category: 'Kirana / Grocery', address: 'Melmalayanur Road', latitude: 11.81, longitude: 79.01, is_open: true, acceptance_sla_minutes: 5, pickup_hold_minutes: 90, price_display_mode: 'hidden', price_mode: 'hidden' },
+  { slug: 'SRVNKLKI', shop_name: 'Saravana Bakery', owner_name: 'B. Saravanan', category: 'Bakery', address: 'Trichy Road, Kallakurichi', latitude: 11.739, longitude: 78.964, is_open: true, acceptance_sla_minutes: 5, pickup_hold_minutes: 90, price_display_mode: 'exact', price_mode: 'exact' },
+  { slug: 'ANNMKLKI', shop_name: 'Annam Tea Stall', owner_name: 'D. Kumar', category: 'Tea Shop', address: 'Railway Feeder Road, Kallakurichi', latitude: 11.744, longitude: 78.958, is_open: true, acceptance_sla_minutes: 5, pickup_hold_minutes: 90, price_display_mode: 'exact', price_mode: 'exact' },
 ];
 
 const WEIGHT_EXTRAS = { min_qty: 0.25, max_qty: 10, step_qty: 0.25 };
@@ -57,6 +64,14 @@ const RAW_INVENTORY = {
   ],
   KOVLKLKI: [
     ['milk', '500ml', 29, 10], ['rice', null, 65, 25], ['sugar', null, 47, 12],
+  ],
+  SRVNKLKI: [
+    ['bread', '400g', 45, 24], ['bun', null, 12, 40], ['cake', null, 30, 18],
+    ['marie', '150g', 30, 20], ['milk', '500ml', 28, 12],
+  ],
+  ANNMKLKI: [
+    ['teacup', null, 12, 200], ['teapowder', null, 320, 8],
+    ['bru', '100g', 96, 6], ['bun', null, 12, 25], ['marie', '150g', 30, 15],
   ],
 };
 

@@ -6,13 +6,13 @@ import { useStore } from '../../store.jsx';
 import { api, auth, ApiError } from '../../lib/api.js';
 import { requestBrowserLocation } from '../../lib/location.js';
 import { shopShareUrl } from '../../lib/qr.js';
+import { SHOP_CATEGORIES } from '../../lib/categories.js';
 import { QrImage } from '../../components/QrImage.jsx';
 import { LangToggle } from '../../components/LangToggle.jsx';
 
 const input =
-  'w-full rounded-xl2 border-2 border-sand bg-white px-4 py-3 text-base outline-none focus:border-primary';
+  'w-full rounded-xl2 border border-sand bg-white px-4 py-3 text-base shadow-card outline-none transition-shadow focus:border-primary focus:shadow-[0_0_0_4px_rgba(124,58,237,0.12)]';
 
-const CATEGORIES = ['Groceries', 'Supermarket', 'Provision Store', 'Bakery', 'Pharmacy', 'Hardware', 'Stationery', 'Mobile & Electronics'];
 const PRICE_MODES = ['exact', 'range', 'hidden'];
 
 function Labeled({ label, hint, children }) {
@@ -143,9 +143,12 @@ export function Onboarding({ user, onSignedIn }) {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-md flex-col px-5 py-8">
-      <header className="mb-6 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2 text-2xl font-extrabold text-primary">
+    <div className="mx-auto flex min-h-dvh max-w-md flex-col px-5 pb-8 pt-safe">
+      <header className="mb-6 flex items-center justify-between pt-4">
+        <Link
+          to="/"
+          className="flex items-center gap-2 text-2xl font-extrabold tracking-tight text-primary"
+        >
           <Store size={22} /> {t('app.name')}
         </Link>
         <LangToggle />
@@ -229,12 +232,21 @@ export function Onboarding({ user, onSignedIn }) {
               <input className={input} value={f.shop_name} onChange={set('shop_name')} required autoFocus />
             </Labeled>
             <Labeled label={t('onb.category')} hint={t('onb.categoryHint')}>
-              <input className={input} value={f.category} onChange={set('category')} list="p31-cats" required />
-              <datalist id="p31-cats">
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c} />
+              <select
+                className={`${input} appearance-none`}
+                value={f.category}
+                onChange={set('category')}
+                required
+              >
+                <option value="" disabled>
+                  {t('onb.categoryPick')}
+                </option>
+                {SHOP_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
                 ))}
-              </datalist>
+              </select>
             </Labeled>
             <div className="grid grid-cols-2 gap-3">
               <Labeled label={t('onb.ownerName')}>
@@ -303,10 +315,12 @@ export function Onboarding({ user, onSignedIn }) {
       {/* ── DONE: QR + poster ───────────────────────────────────────── */}
       {stage === 'done' && shop && (
         <main className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-go/15 text-go">
-            <Check size={28} />
+          <span className="flex h-16 w-16 animate-pop-in items-center justify-center rounded-full bg-go/15 text-go">
+            <Check size={32} strokeWidth={2.5} />
           </span>
-          <h1 className="text-2xl font-bold">{t('onb.doneTitle', { name: shop.shop_name })}</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight">
+            {t('onb.doneTitle', { name: shop.shop_name })}
+          </h1>
           <p className="text-base text-ink-soft">{t('onb.doneSub')}</p>
 
           <QrImage
