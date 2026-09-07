@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ChevronLeft, MapPin, Plus, Check } from 'lucide-react';
+import { ChevronLeft, MapPin, Plus, Check, Store } from 'lucide-react';
 import { useI18n } from '../i18n/index.jsx';
 import { useStore } from '../store.jsx';
 import { api } from '../lib/api.js';
@@ -10,6 +10,8 @@ import { TopBar } from '../components/TopBar.jsx';
 import { OpenBadge } from '../components/Badge.jsx';
 import { VoiceOrder } from '../components/shopper/VoiceOrder.jsx';
 import { CartBar } from '../components/shopper/CartBar.jsx';
+
+const catId = (cat) => `cat-${String(cat).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
 
 function InventoryRow({ item, shopSlug, accepting }) {
   const { t, lang } = useI18n();
@@ -37,13 +39,11 @@ function InventoryRow({ item, shopSlug, accepting }) {
   });
 
   return (
-    <li className="flex items-center gap-3 py-3">
-      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl2 bg-cream text-2xl">
-        {item.icon || '🛒'}
-      </div>
+    <li className="flex items-center gap-3 py-3.5">
+      <div className="chip-icon h-12 w-12 shrink-0 bg-sand-soft text-2xl">{item.icon || '🛒'}</div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline gap-x-2">
-          <span className="text-lg font-bold">{primary}</span>
+          <span className="text-lg font-bold tracking-tight">{primary}</span>
           <span className="text-sm text-ink-soft">{item.pack_size}</span>
         </div>
         {secondary && <div className="text-sm text-ink-soft">{secondary}</div>}
@@ -59,9 +59,9 @@ function InventoryRow({ item, shopSlug, accepting }) {
       <div className="flex shrink-0 flex-col items-end gap-1.5">
         {priceText ? (
           <span
-            className={`text-lg font-extrabold ${
+            className={`font-extrabold ${
               item.in_stock ? 'text-ink' : 'text-ink-soft line-through'
-            } ${item.price_mode === 'range' ? 'text-base' : ''}`}
+            } ${item.price_mode === 'range' ? 'text-base' : 'text-lg'}`}
           >
             {priceText}
           </span>
@@ -71,16 +71,83 @@ function InventoryRow({ item, shopSlug, accepting }) {
         {item.in_stock && accepting && (
           <button
             onClick={() => addToCart(shopSlug, addLine())}
-            className={`flex items-center gap-1 rounded-full px-3 py-1 text-sm font-bold ${
-              inCart ? 'bg-go/15 text-go' : 'bg-primary text-white active:bg-primary-dark'
+            className={`flex items-center gap-1 rounded-full px-3.5 py-1.5 text-sm font-bold transition-transform active:scale-90 ${
+              inCart
+                ? 'bg-go/15 text-go'
+                : 'bg-primary text-white shadow-[0_4px_12px_-3px_rgba(124,58,237,0.55)] active:bg-primary-dark'
             }`}
           >
             {inCart ? <Check size={14} /> : <Plus size={14} />}
-            {inCart ? t('shop.added') : item.sell_by === 'weight' ? t('shop.addWeight', { q: item.min_qty || item.step_qty || 0.25, u: item.base_unit || 'kg' }) : t('shop.add')}
+            {inCart
+              ? t('shop.added')
+              : item.sell_by === 'weight'
+                ? t('shop.addWeight', { q: item.min_qty || item.step_qty || 0.25, u: item.base_unit || 'kg' })
+                : t('shop.add')}
           </button>
         )}
       </div>
     </li>
+  );
+}
+
+/** Horizontal aisle chips — jump to a category section within THIS shop. */
+function AisleNav({ cats }) {
+  const [active, setActive] = useState(cats[0]);
+  const barRef = useRef(null);
+  const lockRef = useRef(0); // ignore scroll-spy briefly after a chip tap
+
+  useEffect(() => {
+    const secs = cats.map((c) => document.getElementById(catId(c))).filter(Boolean);
+    if (!secs.length) return undefined;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (Date.now() < lockRef.current) return;
+        const vis = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (vis[0]) setActive(vis[0].target.dataset.cat);
+      },
+      { rootMargin: '-150px 0px -55% 0px', threshold: 0 },
+    );
+    secs.forEach((s) => io.observe(s));
+    return () => io.disconnect();
+  }, [cats]);
+
+  const jump = (c) => {
+    setActive(c);
+    lockRef.current = Date.now() + 700;
+    document.getElementById(catId(c))?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  // keep the active chip in view within the scroller
+  useEffect(() => {
+    const bar = barRef.current;
+    if (!bar) return;
+    const el = bar.querySelector(`[data-chip="${active}"]`);
+    if (el) el.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+  }, [active]);
+
+  if (cats.length < 2) return null;
+
+  return (
+    <div className="frost sticky top-[52px] z-20 -mx-4 mt-3 border-b border-sand/50 px-4 py-2.5">
+      <div ref={barRef} className="flex gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {cats.map((c) => (
+          <button
+            key={c}
+            data-chip={c}
+            onClick={() => jump(c)}
+            className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-bold transition-colors ${
+              active === c
+                ? 'bg-primary text-white shadow-[0_4px_12px_-3px_rgba(124,58,237,0.5)]'
+                : 'border border-sand bg-white text-ink-soft active:bg-sand-soft'
+            }`}
+          >
+            {c}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -92,10 +159,7 @@ export function ShopDetail({ user }) {
   const load = useCallback(async () => {
     setState({ status: 'loading' });
     try {
-      const [{ shop }, inv] = await Promise.all([
-        api(`/shops/${slug}`),
-        api(`/shops/${slug}/inventory`),
-      ]);
+      const [{ shop }, inv] = await Promise.all([api(`/shops/${slug}`), api(`/shops/${slug}/inventory`)]);
       setState({ status: 'ok', shop, items: inv.items });
     } catch (e) {
       setState({ status: 'error', code: e.code });
@@ -121,10 +185,13 @@ export function ShopDetail({ user }) {
   const accepting = Boolean(shop && shop.is_open && withinHours);
 
   return (
-    <div className="min-h-screen pb-32">
+    <div className="min-h-dvh pb-nav">
       <TopBar user={user} />
-      <main className="mx-auto max-w-md px-4 py-5">
-        <Link to="/shops" className="inline-flex items-center gap-1 text-base font-semibold text-ink-soft">
+      <main className="mx-auto max-w-md px-4 py-4">
+        <Link
+          to="/shops"
+          className="inline-flex items-center gap-1 text-base font-semibold text-ink-soft transition-transform active:-translate-x-0.5"
+        >
           <ChevronLeft size={18} /> {t('shop.back')}
         </Link>
 
@@ -134,29 +201,35 @@ export function ShopDetail({ user }) {
 
         {state.status === 'error' && (
           <p className="py-10 text-center text-lg text-stop">
-            ⚠️ {t(`error.${state.code}`) !== `error.${state.code}` ? t(`error.${state.code}`) : t('common.error')}
+            ⚠️{' '}
+            {t(`error.${state.code}`) !== `error.${state.code}` ? t(`error.${state.code}`) : t('common.error')}
           </p>
         )}
 
         {state.status === 'ok' && (
           <>
-            <div className="mt-3">
-              <h1 className="text-2xl font-extrabold">{state.shop.shop_name}</h1>
-              <p className="text-base text-ink-soft">{state.shop.category}</p>
-              <div className="mt-2 flex items-center gap-2">
-                <OpenBadge open={accepting} />
-                {state.shop.distance_km != null && (
-                  <span className="text-sm font-semibold text-ink-soft">
-                    📍 {t('shops.away', { km: state.shop.distance_km })}
-                  </span>
-                )}
+            <div className="mt-3 flex items-start gap-3">
+              <div className="chip-icon h-14 w-14 shrink-0 text-primary">
+                <Store size={26} strokeWidth={2.25} />
               </div>
-              {state.shop.address && (
-                <p className="mt-2 flex items-center gap-1.5 text-sm text-ink-soft">
-                  <MapPin size={15} /> {state.shop.address}
-                </p>
-              )}
+              <div className="min-w-0 flex-1">
+                <h1 className="text-2xl font-extrabold tracking-tight">{state.shop.shop_name}</h1>
+                <p className="text-base text-ink-soft">{state.shop.category}</p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <OpenBadge open={accepting} />
+                  {state.shop.distance_km != null && (
+                    <span className="text-sm font-semibold text-ink-soft">
+                      📍 {t('shops.away', { km: state.shop.distance_km })}
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
+            {state.shop.address && (
+              <p className="mt-2.5 flex items-center gap-1.5 text-sm text-ink-soft">
+                <MapPin size={15} className="shrink-0 text-ink-faint" /> {state.shop.address}
+              </p>
+            )}
 
             {!accepting && (
               <p className="mt-4 rounded-xl2 bg-stop/10 px-4 py-3 text-base font-semibold text-stop">
@@ -181,32 +254,41 @@ export function ShopDetail({ user }) {
               </div>
             )}
 
-            <p className="mt-4 text-base font-bold text-ink-soft">
-              {t('shop.items', { n: state.items.length })}
-            </p>
-
             {state.items.length === 0 ? (
-              <p className="py-8 text-center text-ink-soft">{t('shop.noItems')}</p>
+              <p className="py-10 text-center text-ink-soft">{t('shop.noItems')}</p>
             ) : (
-              <div className="mt-2 space-y-5">
-                {groups.map(([cat, items]) => (
-                  <section key={cat}>
-                    <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-ink-soft">
-                      {cat}
-                    </h2>
-                    <ul className="divide-y divide-sand rounded-xl2 border-2 border-sand bg-white px-4">
-                      {items.map((it) => (
-                        <InventoryRow
-                          key={it.id}
-                          item={it}
-                          shopSlug={state.shop.slug}
-                          accepting={accepting}
-                        />
-                      ))}
-                    </ul>
-                  </section>
-                ))}
-              </div>
+              <>
+                <AisleNav cats={groups.map(([c]) => c)} />
+
+                <p className="mt-3 text-sm font-bold uppercase tracking-wide text-ink-faint">
+                  {t('shop.items', { n: state.items.length })}
+                </p>
+
+                <div className="mt-2 space-y-6">
+                  {groups.map(([cat, items]) => (
+                    <section
+                      key={cat}
+                      id={catId(cat)}
+                      data-cat={cat}
+                      className="scroll-mt-[150px] animate-fade-up"
+                    >
+                      <h2 className="mb-1.5 text-sm font-extrabold uppercase tracking-wide text-ink-soft">
+                        {cat}
+                      </h2>
+                      <ul className="card divide-y divide-sand/70 px-4">
+                        {items.map((it) => (
+                          <InventoryRow
+                            key={it.id}
+                            item={it}
+                            shopSlug={state.shop.slug}
+                            accepting={accepting}
+                          />
+                        ))}
+                      </ul>
+                    </section>
+                  ))}
+                </div>
+              </>
             )}
           </>
         )}
