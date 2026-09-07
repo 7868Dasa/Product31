@@ -3,6 +3,7 @@ import { useI18n } from '../i18n/index.jsx';
 import { api } from '../lib/api.js';
 import { TopBar } from '../components/TopBar.jsx';
 import { ShopCard } from '../components/ShopCard.jsx';
+import { orderCategories } from '../lib/categories.js';
 import {
   DEFAULT_LOCATION,
   initialLocation,
@@ -57,7 +58,7 @@ export function ShopList({ user }) {
   const cats = useMemo(() => {
     const seen = new Set();
     for (const s of state.shops) if (s.category) seen.add(s.category);
-    return [...seen].sort((a, b) => a.localeCompare(b));
+    return orderCategories(seen); // fixed display order: Grocery, Bakery, Supermarket, Retail, Tea Shop…
   }, [state.shops]);
 
   const visible = useMemo(
