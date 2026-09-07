@@ -1,28 +1,74 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Tamil:wght@400;500;600;700&display=swap');
 @import 'tailwindcss';
 
 /*
  * Blend palette: violet primary actions (premium SaaS feel) on warm
  * stone-neutral surfaces (still warm, still high-contrast for outdoor phone
  * use and older eyes). Big tap targets and plain layout are kept from the
- * primary spec §2.
+ * primary spec §2. The "crystal" layer: Plus Jakarta Sans display type
+ * (Noto Sans Tamil carries Tamil script), soft layered shadows, frosted
+ * headers, gentle enter animations — all CSS, no animation library.
  */
 @theme {
   --color-cream: #faf8f5; /* warm off-white ground */
   --color-sand: #e7e2db; /* warm border / subtle surface */
+  --color-sand-soft: #f0ece6; /* even lighter fill */
   --color-ink: #1c1917; /* stone-900 */
   --color-ink-soft: #57534e; /* stone-600 */
+  --color-ink-faint: #a8a29e; /* stone-400 — micro-labels, placeholders */
 
   --color-primary: #7c3aed; /* violet-600 */
   --color-primary-dark: #6d28d9; /* violet-700 */
   --color-primary-tint: #ede9fe; /* violet-100 */
+  --color-primary-wash: #f5f3ff; /* violet-50 — icon chips, soft cards */
 
   --color-go: #15803d;
   --color-stop: #b91c1c;
   --color-warn: #b45309; /* amber-700, for countdowns / low stock */
 
-  --font-sans: 'Noto Sans', 'Noto Sans Tamil', system-ui, -apple-system, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', 'Noto Sans Tamil', system-ui, -apple-system, 'Segoe UI', sans-serif;
 
   --radius-xl2: 1.5rem; /* 24px — large card radius */
+
+  /* Soft, layered shadows — the "crystal" depth. */
+  --shadow-card: 0 2px 12px rgb(0 0 0 / 0.03);
+  --shadow-raise: 0 8px 24px rgb(0 0 0 / 0.06);
+  --shadow-panel: 0 8px 40px rgb(0 0 0 / 0.05);
+  --shadow-nav: 0 -8px 30px rgb(0 0 0 / 0.03);
+  --shadow-pop: 0 24px 60px rgb(0 0 0 / 0.18);
+
+  --animate-fade-up: fade-up 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-sheet-up: sheet-up 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-pop-in: pop-in 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 html {
@@ -36,6 +82,25 @@ body {
   font-family: var(--font-sans);
   font-size: 1.0625rem; /* 17px base */
   line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* iOS/Android webview: no rubber-band overscroll, no text callout on long-press */
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+/* Inputs stay 16px+ so iOS never auto-zooms on focus. */
+input,
+select,
+textarea {
+  font-size: max(16px, 1rem);
+}
+
+h1,
+h2,
+h3 {
+  letter-spacing: -0.02em; /* tracking-tight on headings */
 }
 
 /* Every interactive element clears the 48px minimum target (spec §2). */
@@ -49,4 +114,72 @@ select {
 :focus-visible {
   outline: 3px solid var(--color-primary);
   outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+@layer utilities {
+  /* Notch / home-indicator safe areas — for the Capacitor Android/iOS build.
+     On a plain browser env(safe-area-inset-*) is 0, so these are no-ops there. */
+  .pt-safe {
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+  }
+  .pb-safe {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+  .pl-safe {
+    padding-left: max(1rem, env(safe-area-inset-left));
+  }
+  .pr-safe {
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+  .px-safe {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+  .bottom-safe {
+    bottom: env(safe-area-inset-bottom);
+  }
+  .pb-nav {
+    /* room for the fixed bottom bar + the home indicator */
+    padding-bottom: calc(6rem + env(safe-area-inset-bottom));
+  }
+  /* Full mobile viewport height that accounts for the browser chrome (dvh). */
+  .min-h-dvh {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+}
+
+@layer components {
+  /* White surface card — soft shadow + hairline warm border. */
+  .card {
+    border-radius: var(--radius-xl2);
+    background: #fff;
+    border: 1px solid color-mix(in srgb, var(--color-sand) 70%, transparent);
+    box-shadow: var(--shadow-card);
+  }
+  /* Rounded icon "chip" for empty states / onboarding headers. */
+  .chip-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 1.25rem;
+    background: var(--color-primary-wash);
+    color: var(--color-primary);
+  }
+  /* Frosted sticky header / bottom bar. */
+  .frost {
+    background: color-mix(in srgb, var(--color-cream) 80%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
 }

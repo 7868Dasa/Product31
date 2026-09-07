@@ -5,9 +5,10 @@
  */
 export function Button({ children, icon: Icon, variant = 'primary', className = '', ...props }) {
   const styles = {
-    primary: 'bg-primary text-white active:bg-primary-dark disabled:opacity-50 shadow-sm',
-    ghost: 'bg-white text-ink border-2 border-sand active:bg-sand disabled:opacity-50',
-    danger: 'bg-white text-stop border-2 border-stop/40 active:bg-stop/10 disabled:opacity-50',
+    primary:
+      'bg-primary text-white shadow-[0_6px_16px_-4px_rgba(124,58,237,0.5)] active:bg-primary-dark disabled:opacity-50 disabled:shadow-none',
+    ghost: 'bg-white text-ink border border-sand shadow-card active:bg-sand-soft disabled:opacity-50',
+    danger: 'bg-white text-stop border border-stop/30 active:bg-stop/10 disabled:opacity-50',
   };
   // string / emoji → text; anything else truthy (a component, incl. lucide's
   // forwardRef objects) → render as an element.
@@ -22,7 +23,7 @@ export function Button({ children, icon: Icon, variant = 'primary', className = 
 
   return (
     <button
-      className={`flex w-full items-center justify-center gap-2.5 rounded-full px-5 py-3.5 text-lg font-semibold transition-colors ${styles[variant]} ${className}`}
+      className={`flex w-full items-center justify-center gap-2.5 rounded-full px-5 py-3.5 text-lg font-semibold transition-transform duration-150 active:scale-[0.97] disabled:active:scale-100 ${styles[variant]} ${className}`}
       {...props}
     >
       {renderIcon}
