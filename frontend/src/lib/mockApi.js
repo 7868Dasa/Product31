@@ -277,6 +277,33 @@ export async function mockApi(path, { method = 'GET', body } = {}) {
     return { count: shop ? 1 : 0, shops: shop ? [shop] : [] };
   }
 
+  const patchShopMatch = pathname.match(/^\/shops\/([0-9A-Z]{4,16})$/);
+  if (patchShopMatch && method === 'PATCH') {
+    const cur = myShopBySlug(patchShopMatch[1]);
+    if (!cur) throw new MockError(404, 'SHOP_NOT_FOUND', 'That shop could not be found.');
+    const allowed = [
+      'shop_name',
+      'category',
+      'address',
+      'owner_name',
+      'phone_number',
+      'latitude',
+      'longitude',
+      'opening_hours',
+      'price_display_mode',
+      'is_open',
+    ];
+    const next = { ...cur };
+    for (const k of allowed) if (body && k in body) next[k] = body[k];
+    if ('price_display_mode' in (body || {})) next.price_mode = body.price_display_mode;
+    try {
+      localStorage.setItem(MYSHOP_KEY, JSON.stringify(next));
+    } catch {
+      /* ignore */
+    }
+    return { shop: next };
+  }
+
   // ── shop discovery + single-shop browsing (build step 2) ──────────────
   if (pathname === '/shops' && method === 'GET') {
     const lat = Number(q.get('lat'));

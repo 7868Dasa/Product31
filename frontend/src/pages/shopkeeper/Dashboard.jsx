@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { Store, Bell, ChefHat, Boxes, QrCode, IndianRupee, ArrowLeftRight, Printer } from 'lucide-react';
+import { Store, Bell, BellOff, ChefHat, Boxes, QrCode, IndianRupee, ArrowLeftRight, Printer } from 'lucide-react';
 import { useI18n } from '../../i18n/index.jsx';
 import { useStore } from '../../store.jsx';
 import { LangToggle } from '../../components/LangToggle.jsx';
@@ -8,6 +8,41 @@ import { OrderCard } from '../../components/shopkeeper/OrderCard.jsx';
 import { CatalogManager } from '../../components/shopkeeper/CatalogManager.jsx';
 import { QrImage } from '../../components/QrImage.jsx';
 import { shopShareUrl } from '../../lib/qr.js';
+import {
+  beep,
+  notify,
+  setTitleBadge,
+  askNotificationPermission,
+  notificationsGranted,
+  notificationsSupported,
+} from '../../lib/orderAlert.js';
+
+/** Blip + desktop notification + tab badge when a new PENDING order appears. */
+function useNewOrderAlert(pending, t) {
+  const seen = useRef(null); // null until first load, then a Set of ids
+  useEffect(() => {
+    const ids = new Set(pending.map((o) => o.id));
+    if (seen.current === null) {
+      seen.current = ids; // first render — don't alert on the initial backlog
+      setTitleBadge(pending.length);
+      return;
+    }
+    const fresh = pending.filter((o) => !seen.current.has(o.id));
+    if (fresh.length) {
+      beep();
+      const o = fresh[0];
+      const n = o.items.reduce((s, i) => s + (i.quantity < 1 ? 1 : Math.round(i.quantity)), 0);
+      notify(
+        t('sk.alert.title', { code: o.order_code }),
+        fresh.length > 1 ? t('sk.alert.many', { n: fresh.length }) : t('sk.alert.body', { n }),
+      );
+    }
+    seen.current = ids;
+    setTitleBadge(pending.length);
+  }, [pending, t]);
+
+  useEffect(() => () => setTitleBadge(0), []);
+}
 
 const TABS = [
   { key: 'new', icon: Bell },
@@ -23,6 +58,7 @@ export function Dashboard() {
     myShop,
     ordersForShop,
     refreshQueue,
+    refreshMyShop,
     isShopOpen,
     toggleShopOpen,
     acceptOrder,
@@ -40,6 +76,7 @@ export function Dashboard() {
   openRef.current = slug ? isShopOpen(slug) : false;
   useEffect(() => {
     if (!slug) return undefined;
+    refreshMyShop();
     refreshQueue(slug);
     const onFocus = () => {
       if (!document.hidden) refreshQueue(slug);
@@ -63,6 +100,14 @@ export function Dashboard() {
     }),
     [orders],
   );
+
+  useNewOrderAlert(groups.new, t);
+  const [alertsOn, setAlertsOn] = useState(() => notificationsGranted());
+  async function enableAlerts() {
+    beep(); // also unlocks WebAudio for later blips
+    const res = await askNotificationPermission();
+    setAlertsOn(res === 'granted');
+  }
 
   // No shop yet → go set one up (spec §5). (after hooks, per rules-of-hooks)
   if (!myShop) return <Navigate to="/shop/onboarding" replace />;
@@ -93,6 +138,20 @@ export function Dashboard() {
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            {notificationsSupported() && (
+              <button
+                onClick={enableAlerts}
+                aria-label={t('sk.alert.toggle')}
+                title={alertsOn ? t('sk.alert.on') : t('sk.alert.off')}
+                className={`inline-flex items-center rounded-full border-2 p-2.5 ${
+                  alertsOn
+                    ? 'border-primary bg-primary-tint text-primary-dark'
+                    : 'border-sand bg-white text-ink-soft'
+                } active:bg-sand`}
+              >
+                {alertsOn ? <Bell size={16} /> : <BellOff size={16} />}
+              </button>
+            )}
             <LangToggle />
             <Link
               to="/"

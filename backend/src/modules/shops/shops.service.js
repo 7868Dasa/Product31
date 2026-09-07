@@ -6,7 +6,7 @@
  * price-comparison surface anywhere.
  */
 import { db } from '../../db.js';
-import { notFound, conflict } from '../../lib/errors.js';
+import { notFound, conflict, forbidden } from '../../lib/errors.js';
 import { newShopSlug } from '../../lib/ids.js';
 
 const SHOP_FIELDS = [
@@ -145,6 +145,33 @@ export async function createShop(ownerUserId, data) {
     })
     .returning('*');
 
+  return shapeShop(row);
+}
+
+/** Owner edits their shop (name, hours, price mode, open/closed, …). */
+export async function updateShop(ownerUserId, slug, patch) {
+  const shop = await db('shops').where({ slug }).first();
+  if (!shop) throw notFound('SHOP_NOT_FOUND', 'That shop could not be found.');
+  if (shop.owner_user_id !== ownerUserId) {
+    throw forbidden('NOT_SHOP_OWNER', 'This is not your shop.');
+  }
+  const allowed = [
+    'shop_name',
+    'category',
+    'address',
+    'owner_name',
+    'phone_number',
+    'latitude',
+    'longitude',
+    'opening_hours',
+    'price_display_mode',
+    'is_open',
+  ];
+  const fields = {};
+  for (const k of allowed) if (k in patch) fields[k] = patch[k];
+  if (!Object.keys(fields).length) return shapeShop(shop);
+
+  const [row] = await db('shops').where({ id: shop.id }).update(fields).returning('*');
   return shapeShop(row);
 }
 

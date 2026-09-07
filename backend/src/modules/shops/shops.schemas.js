@@ -13,6 +13,22 @@ export const createShopSchema = z.object({
   price_display_mode: z.enum(['exact', 'range', 'hidden']).default('exact'),
 });
 
+export const updateShopSchema = z
+  .object({
+    shop_name: z.string().trim().min(2).max(120),
+    category: z.string().trim().min(2).max(60),
+    address: z.string().trim().min(4).max(300),
+    owner_name: z.string().trim().min(2).max(120),
+    phone_number: phoneSchema,
+    latitude: z.coerce.number().gte(-90).lte(90),
+    longitude: z.coerce.number().gte(-180).lte(180),
+    opening_hours: z.string().trim().max(120),
+    price_display_mode: z.enum(['exact', 'range', 'hidden']),
+    is_open: z.boolean(),
+  })
+  .partial()
+  .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
+
 export const nearbyQuerySchema = z.object({
   lat: z.coerce.number().gte(-90).lte(90),
   lng: z.coerce.number().gte(-180).lte(180),

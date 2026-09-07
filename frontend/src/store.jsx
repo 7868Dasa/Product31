@@ -98,6 +98,37 @@ export function StoreProvider({ children }) {
     [adoptShop],
   );
 
+  /** Pull the signed-in owner's shop fresh from the backend. */
+  const refreshMyShop = useCallback(async () => {
+    try {
+      const { shops } = await api('/shops/mine', { authed: true });
+      const shop = shops && shops[0];
+      if (shop) {
+        setMyShop((prev) => ({ ...prev, ...shop }));
+        setShopOpen((p) => ({ ...p, [shop.slug]: shop.is_open }));
+      }
+      return shop || null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  /** Owner edits their shop (name, hours, price mode, is_open, …). */
+  const updateMyShop = useCallback(
+    async (patch) => {
+      if (!myShop) return null;
+      const { shop } = await api(`/shops/${myShop.slug}`, {
+        method: 'PATCH',
+        authed: true,
+        body: patch,
+      });
+      setMyShop((prev) => ({ ...prev, ...shop }));
+      if ('is_open' in patch) setShopOpen((p) => ({ ...p, [myShop.slug]: shop.is_open }));
+      return shop;
+    },
+    [myShop],
+  );
+
   /** Upsert one row into a shop's catalog by (name, pack_size). */
   const upsertRows = useCallback((slug, rows) => {
     let added = 0;
@@ -213,6 +244,8 @@ export function StoreProvider({ children }) {
     myShop,
     adoptShop,
     useDemoShop,
+    refreshMyShop,
+    updateMyShop,
     clearMyShop: () => setMyShop(null),
 
     // ── orders (backend-backed) ────────────────────────────────────────
@@ -253,8 +286,19 @@ export function StoreProvider({ children }) {
       return order.shop_slug;
     },
 
-    isShopOpen: (slug) => shopOpen[slug] ?? true,
-    toggleShopOpen: (slug) => setShopOpen((p) => ({ ...p, [slug]: !(p[slug] ?? true) })),
+    isShopOpen: (slug) =>
+      myShop && myShop.slug === slug && typeof myShop.is_open === 'boolean'
+        ? myShop.is_open
+        : shopOpen[slug] ?? true,
+    toggleShopOpen: (slug) => {
+      // The owner's own shop is server-backed; demo shops stay local.
+      if (myShop && myShop.slug === slug) {
+        const next = !(typeof myShop.is_open === 'boolean' ? myShop.is_open : shopOpen[slug] ?? true);
+        return updateMyShop({ is_open: next }).catch(() => {});
+      }
+      setShopOpen((p) => ({ ...p, [slug]: !(p[slug] ?? true) }));
+      return Promise.resolve();
+    },
 
     // ── catalog (shopkeeper's own view — exact prices) ──────────────────
     catalogForShop: (slug) => catalog[slug] || [],

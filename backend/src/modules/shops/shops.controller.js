@@ -27,6 +27,11 @@ export async function listMine(req, res) {
   res.json({ count: shops.length, shops });
 }
 
+export async function updateShop(req, res) {
+  const shop = await service.updateShop(req.user.id, req.params.slug, req.body);
+  res.json({ shop });
+}
+
 export async function qrPng(req, res) {
   await service.getShopBySlug(req.params.slug); // 404s if unknown
   const png = await buildQrPng(req.params.slug);

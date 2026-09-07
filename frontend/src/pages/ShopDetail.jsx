@@ -5,12 +5,13 @@ import { useI18n } from '../i18n/index.jsx';
 import { useStore } from '../store.jsx';
 import { api } from '../lib/api.js';
 import { formatItemPrice } from '../lib/price.js';
+import { isWithinHours, opensAtLabel } from '../lib/shopHours.js';
 import { TopBar } from '../components/TopBar.jsx';
 import { OpenBadge } from '../components/Badge.jsx';
 import { VoiceOrder } from '../components/shopper/VoiceOrder.jsx';
 import { CartBar } from '../components/shopper/CartBar.jsx';
 
-function InventoryRow({ item, shopSlug }) {
+function InventoryRow({ item, shopSlug, accepting }) {
   const { t, lang } = useI18n();
   const { cartForShop, addToCart } = useStore();
   const primary = lang === 'ta' && item.name_ta ? item.name_ta : item.name;
@@ -67,7 +68,7 @@ function InventoryRow({ item, shopSlug }) {
         ) : (
           <span className="text-sm font-semibold text-ink-soft">{t('shop.priceAtCounter')}</span>
         )}
-        {item.in_stock && (
+        {item.in_stock && accepting && (
           <button
             onClick={() => addToCart(shopSlug, addLine())}
             className={`flex items-center gap-1 rounded-full px-3 py-1 text-sm font-bold ${
@@ -115,6 +116,10 @@ export function ShopDetail({ user }) {
     return [...by.entries()];
   }, [state]);
 
+  const shop = state.status === 'ok' ? state.shop : null;
+  const withinHours = shop ? isWithinHours(shop.opening_hours) : true;
+  const accepting = Boolean(shop && shop.is_open && withinHours);
+
   return (
     <div className="min-h-screen pb-32">
       <TopBar user={user} />
@@ -139,7 +144,7 @@ export function ShopDetail({ user }) {
               <h1 className="text-2xl font-extrabold">{state.shop.shop_name}</h1>
               <p className="text-base text-ink-soft">{state.shop.category}</p>
               <div className="mt-2 flex items-center gap-2">
-                <OpenBadge open={state.shop.is_open} />
+                <OpenBadge open={accepting} />
                 {state.shop.distance_km != null && (
                   <span className="text-sm font-semibold text-ink-soft">
                     📍 {t('shops.away', { km: state.shop.distance_km })}
@@ -153,9 +158,13 @@ export function ShopDetail({ user }) {
               )}
             </div>
 
-            {!state.shop.is_open && (
+            {!accepting && (
               <p className="mt-4 rounded-xl2 bg-stop/10 px-4 py-3 text-base font-semibold text-stop">
-                {t('shop.closedBanner')}
+                {!state.shop.is_open
+                  ? t('shop.closedBanner')
+                  : opensAtLabel(state.shop.opening_hours)
+                    ? t('shop.closedUntil', { time: opensAtLabel(state.shop.opening_hours) })
+                    : t('shop.closedBanner')}
               </p>
             )}
 
@@ -187,7 +196,12 @@ export function ShopDetail({ user }) {
                     </h2>
                     <ul className="divide-y divide-sand rounded-xl2 border-2 border-sand bg-white px-4">
                       {items.map((it) => (
-                        <InventoryRow key={it.id} item={it} shopSlug={state.shop.slug} />
+                        <InventoryRow
+                          key={it.id}
+                          item={it}
+                          shopSlug={state.shop.slug}
+                          accepting={accepting}
+                        />
                       ))}
                     </ul>
                   </section>
@@ -198,7 +212,7 @@ export function ShopDetail({ user }) {
         )}
       </main>
 
-      {state.status === 'ok' && <CartBar shop={state.shop} />}
+      {state.status === 'ok' && accepting && <CartBar shop={state.shop} />}
     </div>
   );
 }

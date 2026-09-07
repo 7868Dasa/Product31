@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Clock, Check, X, PackageCheck, IndianRupee } from 'lucide-react';
+import { Clock, Check, X, PackageCheck, IndianRupee, Printer } from 'lucide-react';
 import { useI18n } from '../../i18n/index.jsx';
+import { printOrderTicket } from '../../lib/printTicket.js';
 
 function useNow(active) {
   const [, tick] = useState(0);
@@ -82,6 +83,13 @@ export function OrderCard({ order, slaMinutes = 5, onAccept, onReject, onReady, 
           {t('sk.total')} ₹{order.subtotal_amount}
         </span>
       </div>
+
+      <button
+        onClick={() => printOrderTicket(order, t, lang)}
+        className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-ink-soft active:text-primary"
+      >
+        <Printer size={15} /> {t('sk.printTicket')}
+      </button>
 
       <div className="mt-4 flex gap-2">
         {order.status === 'PENDING_ACCEPTANCE' && (
