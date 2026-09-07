@@ -48,28 +48,30 @@ export function CatalogManager({ slug }) {
       <div className="grid grid-cols-2 gap-2">
         <button
           onClick={() => setModal('add')}
-          className="flex items-center justify-center gap-2 rounded-full bg-primary py-3 font-semibold text-white active:bg-primary-dark"
+          className="flex items-center justify-center gap-2 rounded-full bg-primary py-3 font-semibold text-white shadow-[0_6px_16px_-4px_rgba(124,58,237,0.5)] transition-transform active:scale-[0.97] active:bg-primary-dark"
         >
           <Plus size={18} /> {t('cat.addItem')}
         </button>
         <button
           onClick={() => setModal('csv')}
-          className="flex items-center justify-center gap-2 rounded-full border-2 border-primary py-3 font-semibold text-primary active:bg-primary-tint"
+          className="flex items-center justify-center gap-2 rounded-full border border-primary py-3 font-semibold text-primary transition-transform active:scale-[0.97] active:bg-primary-tint"
         >
           <FileUp size={18} /> {t('cat.importCsv')}
         </button>
       </div>
 
       {items.length === 0 ? (
-        <p className="rounded-xl2 border-2 border-dashed border-sand px-4 py-10 text-center text-base text-ink-soft">
+        <p className="rounded-xl2 border-2 border-dashed border-sand px-4 py-12 text-center text-base text-ink-soft">
           {t('cat.empty')}
         </p>
       ) : (
         <div className="space-y-4">
           {groups.map(([cat, list]) => (
             <section key={cat}>
-              <h3 className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-soft">{cat}</h3>
-              <ul className="divide-y divide-sand rounded-xl2 border-2 border-sand bg-white px-4">
+              <h3 className="mb-1.5 text-xs font-extrabold uppercase tracking-wide text-ink-faint">
+                {cat}
+              </h3>
+              <ul className="card divide-y divide-sand/70 px-4">
                 {list.map((it) => (
                   <CatalogItemRow
                     key={it.id}
@@ -110,7 +112,7 @@ export function CatalogManager({ slug }) {
 
       {toast && (
         <div className="fixed inset-x-0 bottom-16 z-50 flex justify-center px-4">
-          <div className="rounded-full bg-ink px-4 py-2 text-sm font-semibold text-cream shadow-lg">
+          <div className="animate-fade-up rounded-full bg-ink px-4 py-2 text-sm font-semibold text-cream shadow-pop">
             {toast}
           </div>
         </div>

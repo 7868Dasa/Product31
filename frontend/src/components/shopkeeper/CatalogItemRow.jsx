@@ -26,7 +26,7 @@ export function CatalogItemRow({ item, onChange, onRemove }) {
       </div>
 
       <div className="mt-2 flex flex-wrap items-center gap-2">
-        <label className="flex items-center gap-1 rounded-full border-2 border-sand bg-white px-3 py-1.5 text-sm">
+        <label className="flex items-center gap-1 rounded-full border border-sand bg-white px-3 py-1.5 text-sm shadow-card">
           <span className="text-ink-soft">₹</span>
           <input
             type="number"
@@ -40,10 +40,10 @@ export function CatalogItemRow({ item, onChange, onRemove }) {
           />
         </label>
 
-        <div className="flex items-center gap-1 rounded-full border-2 border-sand bg-white py-1 pl-1.5 pr-2">
+        <div className="flex items-center gap-1 rounded-full border border-sand bg-sand-soft py-1 pl-1.5 pr-2">
           <button
             onClick={() => onChange(item.id, { stock_qty: Math.max(0, item.stock_qty - 1) })}
-            className="rounded-full p-1.5 active:bg-sand"
+            className="rounded-full bg-white p-1.5 shadow-card transition-transform active:scale-90"
             aria-label="−1"
           >
             <Minus size={16} />
@@ -51,7 +51,7 @@ export function CatalogItemRow({ item, onChange, onRemove }) {
           <span className="w-10 text-center font-bold tabular-nums">{item.stock_qty}</span>
           <button
             onClick={() => onChange(item.id, { stock_qty: item.stock_qty + 1 })}
-            className="rounded-full p-1.5 active:bg-sand"
+            className="rounded-full bg-white p-1.5 shadow-card transition-transform active:scale-90"
             aria-label="+1"
           >
             <Plus size={16} />
@@ -60,8 +60,8 @@ export function CatalogItemRow({ item, onChange, onRemove }) {
 
         <button
           onClick={() => onChange(item.id, { is_available: !item.is_available })}
-          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-bold ${
-            sellable ? 'bg-go/15 text-go' : 'border-2 border-sand bg-white text-ink-soft'
+          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-bold transition-transform active:scale-95 ${
+            sellable ? 'bg-go/15 text-go' : 'border border-sand bg-white text-ink-soft'
           }`}
         >
           {sellable ? <Eye size={15} /> : <EyeOff size={15} />}

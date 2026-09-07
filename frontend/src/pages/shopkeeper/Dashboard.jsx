@@ -127,14 +127,18 @@ export function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen pb-24">
-      <header className="sticky top-0 z-30 border-b border-sand bg-cream/95 backdrop-blur">
-        <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
-          <div className="flex min-w-0 items-center gap-2">
-            <Store size={20} className="shrink-0 text-primary" />
+    <div className="min-h-dvh pb-nav">
+      <header className="frost pt-safe sticky top-0 z-30 border-b border-sand/60">
+        <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-2.5">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="chip-icon h-9 w-9 shrink-0 text-primary">
+              <Store size={18} strokeWidth={2.25} />
+            </span>
             <div className="min-w-0">
-              <div className="truncate text-base font-extrabold leading-tight">{shop.shop_name}</div>
-              <div className="text-xs text-ink-soft">{t('sk.title')}</div>
+              <div className="truncate text-base font-extrabold leading-tight tracking-tight">
+                {shop.shop_name}
+              </div>
+              <div className="text-xs text-ink-faint">{t('sk.title')}</div>
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -143,11 +147,11 @@ export function Dashboard() {
                 onClick={enableAlerts}
                 aria-label={t('sk.alert.toggle')}
                 title={alertsOn ? t('sk.alert.on') : t('sk.alert.off')}
-                className={`inline-flex items-center rounded-full border-2 p-2.5 ${
+                className={`inline-flex items-center rounded-full border p-2.5 shadow-card transition-transform active:scale-90 ${
                   alertsOn
                     ? 'border-primary bg-primary-tint text-primary-dark'
                     : 'border-sand bg-white text-ink-soft'
-                } active:bg-sand`}
+                }`}
               >
                 {alertsOn ? <Bell size={16} /> : <BellOff size={16} />}
               </button>
@@ -156,7 +160,7 @@ export function Dashboard() {
             <Link
               to="/"
               aria-label={t('back.toRoles')}
-              className="inline-flex items-center rounded-full border-2 border-sand bg-white p-2.5 text-ink-soft active:bg-sand"
+              className="inline-flex items-center rounded-full border border-sand bg-white p-2.5 text-ink-soft shadow-card transition-transform active:scale-90"
             >
               <ArrowLeftRight size={16} />
             </Link>
@@ -166,7 +170,7 @@ export function Dashboard() {
         <div className="mx-auto max-w-2xl px-4 pb-3">
           <button
             onClick={() => toggleShopOpen(shop.slug)}
-            className={`flex w-full items-center justify-center gap-3 rounded-full px-5 py-3 text-lg font-bold text-white transition-colors ${
+            className={`flex w-full items-center justify-center gap-3 rounded-full px-5 py-3 text-lg font-bold text-white shadow-raise transition-transform active:scale-[0.99] ${
               open ? 'bg-go' : 'bg-stop'
             }`}
           >
@@ -180,17 +184,17 @@ export function Dashboard() {
       </header>
 
       <div className="mx-auto max-w-2xl px-4">
-        <nav className="mt-4 -mx-1 flex gap-1 overflow-x-auto px-1 pb-1">
+        <nav className="-mx-1 mt-4 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {TABS.map(({ key, icon: Icon }) => {
             const badge = key === 'new' ? groups.new.length : 0;
             return (
               <button
                 key={key}
                 onClick={() => setTab(key)}
-                className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border-2 px-4 py-2.5 text-sm font-bold ${
+                className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-4 py-2.5 text-sm font-bold transition-colors ${
                   tab === key
-                    ? 'border-primary bg-primary text-white'
-                    : 'border-sand bg-white text-ink-soft'
+                    ? 'border-primary bg-primary text-white shadow-[0_4px_12px_-3px_rgba(124,58,237,0.5)]'
+                    : 'border-sand bg-white text-ink-soft active:bg-sand-soft'
                 }`}
               >
                 <Icon size={17} />
@@ -228,9 +232,11 @@ export function Dashboard() {
 
           {tab === 'history' && (
             <>
-              <div className="rounded-xl2 border-2 border-sand bg-white p-5 text-center">
-                <div className="text-sm font-semibold text-ink-soft">{t('sk.history.cash')}</div>
-                <div className="text-4xl font-extrabold text-go">₹{cashToday}</div>
+              <div className="card p-6 text-center">
+                <div className="text-xs font-extrabold uppercase tracking-wide text-ink-faint">
+                  {t('sk.history.cash')}
+                </div>
+                <div className="mt-1 text-4xl font-extrabold tracking-tight text-go">₹{cashToday}</div>
                 <div className="text-sm text-ink-soft">
                   {t('sk.history.orders', { n: groups.history.length })}
                 </div>
@@ -255,30 +261,30 @@ export function Dashboard() {
 function QrPanel({ shop, t }) {
   const url = shopShareUrl(shop.slug);
   return (
-    <div className="flex flex-col items-center gap-4 rounded-xl2 border-2 border-sand bg-white p-6 text-center">
-      <h3 className="text-lg font-bold">{t('qr.title')}</h3>
+    <div className="card flex flex-col items-center gap-4 p-6 text-center">
+      <h3 className="text-lg font-extrabold tracking-tight">{t('qr.title')}</h3>
       <p className="text-sm text-ink-soft">{t('qr.sub')}</p>
       <QrImage
         text={url}
         size={512}
         alt="Shop QR code"
-        className="h-52 w-52 rounded-xl2 border-2 border-sand p-2"
+        className="h-52 w-52 rounded-xl2 border border-sand p-2 shadow-card"
       />
-      <code className="break-all rounded-lg bg-sand px-3 py-1.5 text-xs">{url}</code>
+      <code className="break-all rounded-lg bg-sand-soft px-3 py-1.5 text-xs">{url}</code>
       <Link
         to={`/p/${shop.slug}`}
-        className="flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3 font-semibold text-white active:bg-primary-dark"
+        className="flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3 font-semibold text-white shadow-[0_6px_16px_-4px_rgba(124,58,237,0.5)] transition-transform active:scale-[0.98] active:bg-primary-dark"
       >
         <Printer size={18} /> {t('qr.openPoster')}
       </Link>
-      <p className="text-xs text-ink-soft">{t('qr.reprintNote')}</p>
+      <p className="text-xs text-ink-faint">{t('qr.reprintNote')}</p>
     </div>
   );
 }
 
 function Empty({ text }) {
   return (
-    <p className="rounded-xl2 border-2 border-dashed border-sand px-4 py-10 text-center text-base text-ink-soft">
+    <p className="rounded-xl2 border-2 border-dashed border-sand px-4 py-12 text-center text-base text-ink-soft">
       {text}
     </p>
   );
