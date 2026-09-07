@@ -32,6 +32,21 @@ export async function updateShop(req, res) {
   res.json({ shop });
 }
 
+export async function listFavourites(req, res) {
+  const shops = await service.listFavouriteShops(req.user.id);
+  res.json({ count: shops.length, shops });
+}
+
+export async function addFavourite(req, res) {
+  const shops = await service.setFavouriteShop(req.user.id, req.params.slug, true);
+  res.status(201).json({ count: shops.length, shops });
+}
+
+export async function removeFavourite(req, res) {
+  const shops = await service.setFavouriteShop(req.user.id, req.params.slug, false);
+  res.json({ count: shops.length, shops });
+}
+
 export async function qrPng(req, res) {
   await service.getShopBySlug(req.params.slug); // 404s if unknown
   const png = await buildQrPng(req.params.slug);

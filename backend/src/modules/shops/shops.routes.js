@@ -15,11 +15,24 @@ export const shopsRouter = Router();
 // ── shopkeeper: self-service onboarding (spec §5) ─────────────────────────
 shopsRouter.post('/', requireAuth, validate({ body: createShopSchema }), asyncHandler(ctrl.createShop));
 shopsRouter.get('/mine', requireAuth, asyncHandler(ctrl.listMine));
+shopsRouter.get('/favourites', requireAuth, asyncHandler(ctrl.listFavourites));
 shopsRouter.patch(
   '/:slug',
   requireAuth,
   validate({ params: slugParamSchema, body: updateShopSchema }),
   asyncHandler(ctrl.updateShop),
+);
+shopsRouter.post(
+  '/:slug/favourite',
+  requireAuth,
+  validate({ params: slugParamSchema }),
+  asyncHandler(ctrl.addFavourite),
+);
+shopsRouter.delete(
+  '/:slug/favourite',
+  requireAuth,
+  validate({ params: slugParamSchema }),
+  asyncHandler(ctrl.removeFavourite),
 );
 
 // ── public browsing (spec §11: look before registering) ──────────────────

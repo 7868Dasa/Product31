@@ -175,6 +175,31 @@ export async function updateShop(ownerUserId, slug, patch) {
   return shapeShop(row);
 }
 
+/** A shopper's favourite shops ("My shops"), newest first. */
+export async function listFavouriteShops(userId) {
+  const rows = await db('favourite_shops as f')
+    .join('shops as s', 's.id', 'f.shop_id')
+    .where('f.user_id', userId)
+    .orderBy('f.created_at', 'desc')
+    .select('s.*');
+  return rows.map(shapeShop);
+}
+
+/** Add / remove a favourite. Idempotent. Returns the updated list. */
+export async function setFavouriteShop(userId, slug, on) {
+  const shop = await db('shops').where({ slug }).first();
+  if (!shop) throw notFound('SHOP_NOT_FOUND', 'That shop could not be found.');
+  if (on) {
+    await db('favourite_shops')
+      .insert({ user_id: userId, shop_id: shop.id })
+      .onConflict(['user_id', 'shop_id'])
+      .ignore();
+  } else {
+    await db('favourite_shops').where({ user_id: userId, shop_id: shop.id }).del();
+  }
+  return listFavouriteShops(userId);
+}
+
 export async function getShopInventory(slug) {
   const shop = await db('shops').where({ slug }).first();
   if (!shop) throw notFound('SHOP_NOT_FOUND', 'That shop could not be found.');

@@ -114,6 +114,9 @@
   "shops.widen": "Search a wider area",
   "shops.allTypes": "All",
   "shops.noneOfType": "No {type} shops nearby.",
+  "shops.myShops": "My shops",
+  "shops.fav": "Add to my shops",
+  "shops.unfav": "Remove from my shops",
   "shops.open": "Open now",
   "shops.closed": "Closed",
   "shops.away": "{km} km away",
@@ -132,6 +135,7 @@
   "shop.addWeight": "Add {q} {u}",
   "shop.soldLoose": "sold loose, by weight",
   "shop.priceAtCounter": "Price at counter",
+  "shop.openInMaps": "Open in Maps",
 
   "voice.title": "Order by voice",
   "voice.spokenReply": "Voice reply",

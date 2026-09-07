@@ -114,6 +114,9 @@
   "shops.widen": "பரந்த பகுதியில் தேடு",
   "shops.allTypes": "அனைத்தும்",
   "shops.noneOfType": "அருகில் {type} கடைகள் இல்லை.",
+  "shops.myShops": "என் கடைகள்",
+  "shops.fav": "என் கடைகளில் சேர்",
+  "shops.unfav": "என் கடைகளிலிருந்து நீக்கு",
   "shops.open": "இப்போது திறந்துள்ளது",
   "shops.closed": "மூடப்பட்டுள்ளது",
   "shops.away": "{km} கி.மீ. தொலைவில்",
@@ -132,6 +135,7 @@
   "shop.addWeight": "{q} {u} சேர்",
   "shop.soldLoose": "தளர்வாக, எடையில் விற்பனை",
   "shop.priceAtCounter": "விலை கடையில்",
+  "shop.openInMaps": "வரைபடத்தில் திற",
 
   "voice.title": "குரல் மூலம் ஆர்டர்",
   "voice.spokenReply": "குரல் பதில்",

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ChevronLeft, MapPin, Plus, Check, Store } from 'lucide-react';
+import { ChevronLeft, MapPin, Plus, Check, Store, Star } from 'lucide-react';
 import { useI18n } from '../i18n/index.jsx';
 import { useStore } from '../store.jsx';
 import { api } from '../lib/api.js';
@@ -154,6 +154,7 @@ function AisleNav({ cats }) {
 export function ShopDetail({ user }) {
   const { slug } = useParams();
   const { t } = useI18n();
+  const { isFavShop, toggleFavShop } = useStore();
   const [state, setState] = useState({ status: 'loading' });
 
   const load = useCallback(async () => {
@@ -224,11 +225,36 @@ export function ShopDetail({ user }) {
                   )}
                 </div>
               </div>
+              <button
+                type="button"
+                onClick={() => toggleFavShop(state.shop)}
+                aria-pressed={isFavShop(state.shop.slug)}
+                aria-label={isFavShop(state.shop.slug) ? t('shops.unfav') : t('shops.fav')}
+                className={`-mt-1 -mr-1 shrink-0 rounded-full p-2 transition-transform active:scale-90 ${
+                  isFavShop(state.shop.slug) ? 'text-primary' : 'text-ink-faint'
+                }`}
+              >
+                <Star
+                  size={24}
+                  fill={isFavShop(state.shop.slug) ? 'currentColor' : 'none'}
+                  strokeWidth={2}
+                />
+              </button>
             </div>
             {state.shop.address && (
-              <p className="mt-2.5 flex items-center gap-1.5 text-sm text-ink-soft">
-                <MapPin size={15} className="shrink-0 text-ink-faint" /> {state.shop.address}
-              </p>
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                  state.shop.latitude != null && state.shop.longitude != null
+                    ? `${state.shop.latitude},${state.shop.longitude}`
+                    : `${state.shop.shop_name} ${state.shop.address}`,
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={t('shop.openInMaps')}
+                className="mt-2.5 flex items-center gap-1.5 text-sm font-medium text-primary underline decoration-primary/30 underline-offset-2 transition-opacity active:opacity-60"
+              >
+                <MapPin size={15} className="shrink-0" /> {state.shop.address}
+              </a>
             )}
 
             {!accepting && (

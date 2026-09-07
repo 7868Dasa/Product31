@@ -58,11 +58,15 @@ export async function recordConsent(user, body, ctx) {
 
 /** Everything we hold about this user, machine-readable (DPDP right to access). */
 export async function exportData(user, ctx) {
-  const [profile, consents, orders, wishlist, notifications, events] = await Promise.all([
+  const [profile, consents, orders, wishlist, favourites, notifications, events] = await Promise.all([
     db('users').where({ id: user.id }).first(),
     db('user_consents').where({ user_id: user.id }).orderBy('created_at'),
     db('orders').where({ user_id: user.id }).orderBy('created_at'),
     db('wishlist_items').where({ user_id: user.id }),
+    db('favourite_shops as f')
+      .join('shops as s', 's.id', 'f.shop_id')
+      .where('f.user_id', user.id)
+      .select('s.slug', 's.shop_name', 'f.created_at'),
     db('notifications').where({ recipient_type: 'user', recipient_id: user.id }),
     db('security_events').where({ user_id: user.id }).orderBy('created_at').limit(1000),
   ]);
@@ -103,6 +107,7 @@ export async function exportData(user, ctx) {
     orders,
     order_items: orderItems,
     wishlist,
+    favourite_shops: favourites,
     notifications,
     security_events: events,
   };
@@ -129,6 +134,7 @@ export async function deleteAccount(user, ctx) {
       .whereNull('revoked_at')
       .update({ revoked_at: trx.fn.now() });
     await trx('wishlist_items').where({ user_id: user.id }).del();
+    await trx('favourite_shops').where({ user_id: user.id }).del();
     await trx('otp_verifications').where({ phone_number: user.phone_number }).del();
     await trx('notifications').where({ recipient_type: 'user', recipient_id: user.id }).del();
     await trx('users')

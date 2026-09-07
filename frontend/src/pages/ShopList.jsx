@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Star } from 'lucide-react';
 import { useI18n } from '../i18n/index.jsx';
+import { useStore } from '../store.jsx';
 import { api } from '../lib/api.js';
 import { TopBar } from '../components/TopBar.jsx';
 import { ShopCard } from '../components/ShopCard.jsx';
@@ -15,6 +17,7 @@ const RADII = [5, 15, 25];
 
 export function ShopList({ user }) {
   const { t } = useI18n();
+  const { favShops, refreshFavShops } = useStore();
   const [loc, setLoc] = useState(initialLocation);
   const [radius, setRadius] = useState(5);
   const [state, setState] = useState({ status: 'loading', shops: [] });
@@ -35,6 +38,10 @@ export function ShopList({ user }) {
   useEffect(() => {
     load(loc, radius);
   }, [load, loc, radius]);
+
+  useEffect(() => {
+    refreshFavShops();
+  }, [refreshFavShops]);
 
   async function useMyLocation() {
     setLocating(true);
@@ -88,7 +95,22 @@ export function ShopList({ user }) {
           </p>
         )}
 
-        <div className="mt-4 flex gap-2">
+        {favShops.length > 0 && (
+          <section className="mt-5">
+            <h2 className="mb-2 flex items-center gap-1.5 text-sm font-extrabold uppercase tracking-wide text-ink-faint">
+              <Star size={14} className="text-primary" fill="currentColor" /> {t('shops.myShops')}
+            </h2>
+            <div className="space-y-3">
+              {favShops.map((s) => (
+                <div key={s.slug} className="animate-fade-up">
+                  <ShopCard shop={s} />
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <div className="mt-5 flex gap-2">
           {RADII.map((r) => (
             <button
               key={r}

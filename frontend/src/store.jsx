@@ -22,6 +22,7 @@ const CATALOG_KEY = 'p31.demo.catalog';
 const MYSHOP_KEY = 'p31.demo.myshop';
 const CART_KEY = 'p31.demo.cart';
 const REPORT_KEY = 'p31.demo.report_unlocked';
+const FAV_KEY = 'p31.favshops'; // array of favourited shop objects (per device)
 const ORDERS_KEY = 'p31.demo.orders'; // owned by mockApi; cleared by resetDemoOrders
 
 /** The pre-baked demo shop (used by "skip onboarding"). */
@@ -70,12 +71,15 @@ export function StoreProvider({ children }) {
   const [myShop, setMyShop] = useState(() => load(MYSHOP_KEY, null));
   const [cart, setCart] = useState(() => load(CART_KEY, {}));
   const [reportUnlocked, setReportUnlocked] = useState(() => load(REPORT_KEY, false));
+  const [favShops, setFavShops] = useState(() => load(FAV_KEY, []));
 
   // Backend-backed caches.
   const [myOrdersList, setMyOrdersList] = useState([]);
   const [queues, setQueues] = useState({}); // slug -> orders[]
 
   useEffect(() => save(REPORT_KEY, reportUnlocked), [reportUnlocked]);
+  // favShops persistence is owned by the API layer (mockApi in demo); the
+  // useState initialiser reads FAV_KEY once for an instant first paint.
   useEffect(() => save(ROLE_KEY, role), [role]);
   useEffect(() => save(SHOPSTATE_KEY, shopOpen), [shopOpen]);
   useEffect(() => save(CATALOG_KEY, catalog), [catalog]);
@@ -228,6 +232,38 @@ export function StoreProvider({ children }) {
   const markReady = useCallback((id) => transition(id, 'ready'), [transition]);
   const markCollected = useCallback((id) => transition(id, 'collect'), [transition]);
 
+  // ── favourite shops (per device; opportunistically synced to a backend) ──
+  const isFavShop = useCallback((slug) => favShops.some((s) => s.slug === slug), [favShops]);
+
+  const toggleFavShop = useCallback((shop) => {
+    if (!shop || !shop.slug) return;
+    setFavShops((prev) => {
+      const has = prev.some((s) => s.slug === shop.slug);
+      const method = has ? 'DELETE' : 'POST';
+      // best-effort sync; localStorage is the source of truth in v1
+      api(`/shops/${shop.slug}/favourite`, { method, authed: true }).catch(() => {});
+      if (has) return prev.filter((s) => s.slug !== shop.slug);
+      const lite = {
+        slug: shop.slug,
+        shop_name: shop.shop_name,
+        category: shop.category || null,
+        is_open: shop.is_open ?? null,
+        distance_km: shop.distance_km ?? null,
+      };
+      return [lite, ...prev.filter((s) => s.slug !== shop.slug)];
+    });
+  }, []);
+
+  const refreshFavShops = useCallback(async () => {
+    try {
+      const { shops } = await api('/shops/favourites', { authed: true });
+      if (Array.isArray(shops)) setFavShops(shops);
+      return shops || [];
+    } catch {
+      return favShops; // offline / logged-out — keep the local list
+    }
+  }, [favShops]);
+
   const resetDemoOrders = useCallback(() => {
     try {
       localStorage.removeItem(ORDERS_KEY);
@@ -269,6 +305,12 @@ export function StoreProvider({ children }) {
       setReportUnlocked(true);
       return { unlocked: true, amount: 29, currency: 'INR', demo: true, at: new Date().toISOString() };
     },
+
+    // ── favourite shops ───────────────────────────────────────────────
+    favShops,
+    isFavShop,
+    toggleFavShop,
+    refreshFavShops,
 
     /** Put a past order's lines back in that shop's cart. */
     buyAgain: (order) => {

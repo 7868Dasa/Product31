@@ -19,7 +19,20 @@ const USER_KEY = 'p31.demo.user';
 const MYSHOP_KEY = 'p31.demo.myshop';
 const CATALOG_KEY = 'p31.demo.catalog';
 const ORDERS_KEY = 'p31.demo.orders';
+const FAV_KEY = 'p31.favshops';
 const DEMO_SLA_MIN = 5; // matches every demo shop's acceptance_sla_minutes
+
+function loadFavs() {
+  const v = readJson(FAV_KEY);
+  return Array.isArray(v) ? v : [];
+}
+function saveFavs(list) {
+  try {
+    localStorage.setItem(FAV_KEY, JSON.stringify(list));
+  } catch {
+    /* ignore */
+  }
+}
 
 const ORDER_ALPHABET = '23456789ABCDEFGHJKMNPQRSTVWXYZ';
 const demoOrderCode = () =>
@@ -336,6 +349,34 @@ export async function mockApi(path, { method = 'GET', body } = {}) {
     return { shop };
   }
 
+  // ── favourite shops ─────────────────────────────────────────────────
+  if (pathname === '/shops/favourites' && method === 'GET') {
+    const favs = loadFavs();
+    // refresh the open/closed + distance snapshot from live demo data
+    const fresh = favs.map((f) => {
+      const s = demoShop(f.slug) || myShopBySlug(f.slug);
+      return s
+        ? { slug: s.slug, shop_name: s.shop_name, category: s.category, is_open: s.is_open, distance_km: f.distance_km ?? null }
+        : f;
+    });
+    return { count: fresh.length, shops: fresh };
+  }
+  const favMatch = pathname.match(/^\/shops\/([0-9A-Z]{4,16})\/favourite$/);
+  if (favMatch && (method === 'POST' || method === 'DELETE')) {
+    const slug = favMatch[1];
+    const shop = demoShop(slug) || myShopBySlug(slug);
+    if (!shop) throw new MockError(404, 'SHOP_NOT_FOUND', 'That shop could not be found.');
+    let favs = loadFavs().filter((f) => f.slug !== slug);
+    if (method === 'POST') {
+      favs = [
+        { slug: shop.slug, shop_name: shop.shop_name, category: shop.category || null, is_open: shop.is_open ?? null, distance_km: null },
+        ...favs,
+      ];
+    }
+    saveFavs(favs);
+    return { count: favs.length, shops: favs };
+  }
+
   // ── orders (build step 4, scoped) ────────────────────────────────────
   const shopOrdersMatch = pathname.match(/^\/shops\/([0-9A-Z]{4,16})\/orders$/);
   if (shopOrdersMatch && method === 'POST') {
@@ -492,6 +533,7 @@ export async function mockApi(path, { method = 'GET', body } = {}) {
       orders: [],
       order_items: [],
       wishlist: [],
+      favourite_shops: loadFavs(),
       notifications: [],
       security_events: [],
       _note: 'Demo export — the real backend returns your full order & consent history.',
