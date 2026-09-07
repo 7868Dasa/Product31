@@ -31,7 +31,7 @@ export function SpendReportPrint({ user }) {
   const r = spendReport();
 
   return (
-    <div className="min-h-screen bg-white text-ink">
+    <div className="min-h-dvh bg-white text-ink">
       <style>{`@media print { .p31-noprint{display:none!important} @page{margin:14mm} body{background:#fff!important} }`}</style>
 
       <div className="p31-noprint sticky top-0 flex items-center justify-between border-b border-sand bg-cream px-4 py-3">
@@ -118,7 +118,7 @@ export function SpendReportPrint({ user }) {
 }
 
 const Box = ({ label, value }) => (
-  <div className="rounded-xl2 border-2 border-sand p-3">
+  <div className="rounded-xl2 border border-sand p-3">
     <div className="text-xs text-ink-soft">{label}</div>
     <div className="text-xl font-extrabold">{value}</div>
   </div>
@@ -126,7 +126,7 @@ const Box = ({ label, value }) => (
 const Section = ({ title, children }) => (
   <section className="mt-6">
     <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-ink-soft">{title}</h2>
-    <div className="rounded-xl2 border-2 border-sand px-4 py-1">{children}</div>
+    <div className="rounded-xl2 border border-sand px-4 py-1">{children}</div>
   </section>
 );
 const Row = ({ left, right }) => (

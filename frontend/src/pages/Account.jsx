@@ -105,12 +105,12 @@ export function Account({ user, onSignOut, onUserUpdated }) {
   }
 
   return (
-    <div className="min-h-screen pb-24">
+    <div className="min-h-dvh pb-24">
       <TopBar user={user} />
       <main className="mx-auto max-w-md space-y-6 px-4 py-6">
         <h1 className="text-2xl font-bold">{t('account.title')}</h1>
 
-        <dl className="divide-y divide-sand rounded-xl2 border-2 border-sand bg-white px-4">
+        <dl className="divide-y divide-sand rounded-xl2 border border-sand shadow-card bg-white px-4">
           <div className="flex items-center justify-between py-4">
             <dt className="text-base text-ink-soft">{t('account.phone')}</dt>
             <dd className="text-lg font-bold">{user.phone_number}</dd>
@@ -122,7 +122,7 @@ export function Account({ user, onSignOut, onUserUpdated }) {
           <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-ink-soft">
             {t('account.privacy')}
           </h2>
-          <div className="divide-y divide-sand rounded-xl2 border-2 border-sand bg-white px-4">
+          <div className="divide-y divide-sand rounded-xl2 border border-sand shadow-card bg-white px-4">
             <Toggle
               icon={MapPin}
               label={t('consent.location')}
@@ -194,7 +194,7 @@ export function Account({ user, onSignOut, onUserUpdated }) {
             <input
               value={deleteText}
               onChange={(e) => setDeleteText(e.target.value)}
-              className="mt-1 w-full rounded-xl2 border-2 border-sand bg-white px-3 py-2.5 text-base outline-none focus:border-stop"
+              className="mt-1 w-full rounded-xl2 border border-sand shadow-card bg-white px-3 py-2.5 text-base outline-none focus:border-stop"
               autoComplete="off"
             />
           </label>

@@ -26,7 +26,7 @@ export function SpendReport({ user }) {
   }, [refreshMyOrders]);
 
   return (
-    <div className="min-h-screen pb-24">
+    <div className="min-h-dvh pb-24">
       <TopBar user={user} />
       <main className="mx-auto max-w-md space-y-5 px-4 py-5">
         <Link to="/orders" className="inline-flex items-center gap-1 text-sm font-semibold text-ink-soft">
@@ -40,7 +40,7 @@ export function SpendReport({ user }) {
           </p>
         ) : (
           <>
-            <div className="rounded-xl2 border-2 border-sand bg-white p-5 text-center">
+            <div className="rounded-xl2 border border-sand shadow-card bg-white p-5 text-center">
               <div className="text-sm font-semibold text-ink-soft">{t('spend.totalSpent')}</div>
               <div className="text-4xl font-extrabold text-primary">₹{r.paid_total}</div>
               <div className="mt-1 text-sm text-ink-soft">
@@ -57,7 +57,7 @@ export function SpendReport({ user }) {
                 <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-ink-soft">
                   {t('spend.byShop')}
                 </h2>
-                <ul className="divide-y divide-sand rounded-xl2 border-2 border-sand bg-white px-4">
+                <ul className="divide-y divide-sand rounded-xl2 border border-sand shadow-card bg-white px-4">
                   {r.by_shop.map((s) => (
                     <li key={s.shop} className="flex items-center justify-between py-3 text-sm">
                       <span className="flex items-center gap-1.5">
@@ -76,7 +76,7 @@ export function SpendReport({ user }) {
                 <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-ink-soft">
                   {t('spend.byMonth')}
                 </h2>
-                <ul className="divide-y divide-sand rounded-xl2 border-2 border-sand bg-white px-4">
+                <ul className="divide-y divide-sand rounded-xl2 border border-sand shadow-card bg-white px-4">
                   {r.by_month.map((m) => (
                     <li key={m.month} className="flex justify-between py-2.5 text-sm">
                       <span>{monthLabel(m.month, lang)}</span>
@@ -92,7 +92,7 @@ export function SpendReport({ user }) {
                 <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-ink-soft">
                   {t('spend.topItems')}
                 </h2>
-                <ul className="divide-y divide-sand rounded-xl2 border-2 border-sand bg-white px-4">
+                <ul className="divide-y divide-sand rounded-xl2 border border-sand shadow-card bg-white px-4">
                   {r.top_items.map((it) => (
                     <li key={it.name} className="flex justify-between py-2.5 text-sm">
                       <span>

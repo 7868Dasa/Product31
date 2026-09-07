@@ -260,7 +260,7 @@ export function VoiceOrder({ shop, items }) {
             value={interim || text}
             onChange={(e) => setText(e.target.value)}
             placeholder={t('voice.typePlaceholder')}
-            className="w-full rounded-full border-2 border-sand bg-white px-4 py-2.5 text-base outline-none focus:border-primary"
+            className="w-full rounded-full border border-sand shadow-card bg-white px-4 py-2.5 text-base outline-none focus:border-primary"
             lang={lang}
           />
           <button

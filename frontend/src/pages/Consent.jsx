@@ -8,7 +8,7 @@ import { LangToggle } from '../components/LangToggle.jsx';
 
 function Check({ checked, onChange, children, required }) {
   return (
-    <label className="flex items-start gap-3 rounded-xl2 border-2 border-sand bg-white p-3">
+    <label className="flex items-start gap-3 rounded-xl2 border border-sand shadow-card bg-white p-3">
       <input
         type="checkbox"
         checked={checked}
@@ -64,7 +64,7 @@ export function Consent({ user, onUpdated, source = 'signup' }) {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-md flex-col px-5 py-8">
+    <div className="mx-auto flex min-h-dvh max-w-md flex-col px-5 py-8">
       <header className="mb-5 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <ShieldCheck size={22} className="text-primary" />
