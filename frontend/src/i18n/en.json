@@ -112,6 +112,8 @@
   "shops.searching": "Finding shops…",
   "shops.none": "No shops within {km} km.",
   "shops.widen": "Search a wider area",
+  "shops.allTypes": "All",
+  "shops.noneOfType": "No {type} shops nearby.",
   "shops.open": "Open now",
   "shops.closed": "Closed",
   "shops.away": "{km} km away",

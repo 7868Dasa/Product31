@@ -54,21 +54,22 @@ function OrderCard({ order, onBuyAgain }) {
   const done = !ACTIVE.includes(order.status);
 
   return (
-    <article className="rounded-xl2 border-2 border-sand bg-white p-4">
+    <article className="card animate-fade-up p-4">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <Link
             to={`/s/${order.shop_slug}`}
-            className="flex items-center gap-1.5 font-bold text-ink"
+            className="flex items-center gap-1.5 font-bold tracking-tight text-ink"
           >
             <Store size={15} className="text-primary" /> {order.shop_name || order.shop_slug}
           </Link>
-          <div className="mt-0.5 text-xs text-ink-soft">
-            {timeAgo(order.created_at, t)} · {t('orders.code')} {order.order_code}
+          <div className="mt-0.5 text-xs text-ink-faint">
+            {timeAgo(order.created_at, t)} · {t('orders.code')}{' '}
+            <span className="font-mono font-semibold text-ink-soft">{order.order_code}</span>
           </div>
         </div>
         <span
-          className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${
+          className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-extrabold uppercase tracking-wide ${
             order.status === 'COLLECTED'
               ? 'bg-go/15 text-go'
               : order.status === 'READY_FOR_PICKUP'
@@ -101,7 +102,7 @@ function OrderCard({ order, onBuyAgain }) {
       {done && (
         <button
           onClick={() => onBuyAgain(order)}
-          className="mt-3 inline-flex items-center gap-1.5 rounded-full border-2 border-primary px-4 py-2 text-sm font-bold text-primary active:bg-primary-tint"
+          className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-primary px-4 py-2 text-sm font-bold text-primary transition-transform active:scale-95 active:bg-primary-tint"
         >
           <RotateCcw size={15} /> {t('orders.buyAgain')}
         </button>
@@ -160,15 +161,15 @@ export function Orders({ user }) {
   }
 
   return (
-    <div className="min-h-screen pb-24">
+    <div className="min-h-dvh pb-nav">
       <TopBar user={user} />
       <main className="mx-auto max-w-md space-y-6 px-4 py-5">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">{t('orders.title')}</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight">{t('orders.title')}</h1>
           {all.length > 0 && (
             <Link
               to="/orders/report"
-              className="inline-flex items-center gap-1.5 rounded-full border-2 border-primary px-3 py-1.5 text-sm font-bold text-primary active:bg-primary-tint"
+              className="inline-flex items-center gap-1.5 rounded-full border border-primary px-3 py-1.5 text-sm font-bold text-primary transition-transform active:scale-95 active:bg-primary-tint"
             >
               <PieChart size={15} /> {t('spend.title')}
             </Link>
@@ -176,14 +177,14 @@ export function Orders({ user }) {
         </div>
 
         {loaded && all.length === 0 && (
-          <p className="rounded-xl2 border-2 border-dashed border-sand px-4 py-10 text-center text-ink-soft">
+          <p className="rounded-xl2 border-2 border-dashed border-sand px-4 py-12 text-center text-ink-soft">
             {t('orders.empty')}
           </p>
         )}
 
         {active.length > 0 && (
           <section className="space-y-3">
-            <h2 className="text-sm font-bold uppercase tracking-wide text-ink-soft">
+            <h2 className="text-sm font-extrabold uppercase tracking-wide text-ink-faint">
               {t('orders.active')}
             </h2>
             {active.map((o) => (
@@ -194,7 +195,7 @@ export function Orders({ user }) {
 
         {past.length > 0 && (
           <section className="space-y-3">
-            <h2 className="text-sm font-bold uppercase tracking-wide text-ink-soft">
+            <h2 className="text-sm font-extrabold uppercase tracking-wide text-ink-faint">
               {t('orders.past')}
             </h2>
             {past.map((o) => (

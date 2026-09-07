@@ -49,10 +49,10 @@ export function CartBar({ shop }) {
 
   return (
     <>
-      <div className="fixed inset-x-0 bottom-10 z-40 px-4">
+      <div className="fixed inset-x-0 bottom-[max(2.5rem,calc(env(safe-area-inset-bottom)+1rem))] z-40 animate-fade-up px-4">
         <button
           onClick={() => setOpen(true)}
-          className="mx-auto flex w-full max-w-md items-center justify-between rounded-full bg-primary px-5 py-3.5 text-white shadow-lg active:bg-primary-dark"
+          className="mx-auto flex w-full max-w-md items-center justify-between rounded-full bg-primary px-5 py-3.5 text-white shadow-[0_12px_30px_-6px_rgba(124,58,237,0.55)] transition-transform active:scale-[0.98] active:bg-primary-dark"
         >
           <span className="flex items-center gap-2 font-bold">
             <ShoppingCart size={20} /> {t('cart.count', { n: lines.length })}
@@ -78,13 +78,13 @@ export function CartBar({ shop }) {
           }
         >
           {err && (
-            <p className="mb-2 rounded-lg bg-stop/10 px-3 py-2 text-sm font-semibold text-stop">{err}</p>
+            <p className="mb-2 rounded-xl bg-stop/10 px-3 py-2 text-sm font-semibold text-stop">{err}</p>
           )}
-          <ul className="divide-y divide-sand">
+          <ul className="divide-y divide-sand/70">
             {lines.map((l) => (
               <li key={l.id} className="flex items-center gap-2 py-3">
                 <div className="min-w-0 flex-1">
-                  <div className="font-semibold">
+                  <div className="font-semibold tracking-tight">
                     {nameOf(l)}{' '}
                     {l.pack_size && <span className="text-sm text-ink-soft">{l.pack_size}</span>}
                   </div>
@@ -93,10 +93,10 @@ export function CartBar({ shop }) {
                     {l.unit_price > 0 && <> · ₹{lineTotal(l)}</>}
                   </div>
                 </div>
-                <div className="flex items-center gap-1 rounded-full border-2 border-sand py-1 pl-1.5 pr-2">
+                <div className="flex items-center gap-1 rounded-full border border-sand bg-sand-soft py-1 pl-1.5 pr-2">
                   <button
                     onClick={() => setCartQty(shop.slug, l.id, l.qty - stepOf(l))}
-                    className="rounded-full p-1.5 active:bg-sand"
+                    className="rounded-full bg-white p-1.5 shadow-card transition-transform active:scale-90"
                     aria-label="−"
                   >
                     <Minus size={15} />
@@ -104,7 +104,7 @@ export function CartBar({ shop }) {
                   <span className="min-w-[3.5rem] text-center font-bold tabular-nums">{qtyLabel(l)}</span>
                   <button
                     onClick={() => setCartQty(shop.slug, l.id, Math.min(l.qty + stepOf(l), l.max_qty || Infinity))}
-                    className="rounded-full p-1.5 active:bg-sand"
+                    className="rounded-full bg-primary p-1.5 text-white shadow-card transition-transform active:scale-90"
                     aria-label="+"
                   >
                     <Plus size={15} />
@@ -125,13 +125,15 @@ export function CartBar({ shop }) {
 
       {placed && (
         <Modal title={t('cart.placedTitle')} onClose={() => setPlaced(null)}>
-          <div className="flex flex-col items-center gap-3 py-4 text-center">
-            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-go/15 text-go">
-              <Check size={28} />
+          <div className="flex flex-col items-center gap-4 py-3 text-center">
+            <span className="flex h-16 w-16 animate-pop-in items-center justify-center rounded-full bg-go/15 text-go">
+              <Check size={32} strokeWidth={2.5} />
             </span>
-            <p className="text-base">{t('cart.placedSub')}</p>
-            <div className="font-mono text-3xl font-extrabold tracking-widest text-primary">
-              {placed.order_code}
+            <p className="text-base font-medium text-ink-soft">{t('cart.placedSub')}</p>
+            <div className="w-full rounded-2xl bg-primary-wash px-4 py-5">
+              <div className="font-mono text-4xl font-extrabold tracking-[0.22em] text-primary-dark">
+                {placed.order_code}
+              </div>
             </div>
             <p className="text-sm text-ink-soft">{t('cart.placedHint')}</p>
           </div>

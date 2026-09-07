@@ -112,6 +112,8 @@
   "shops.searching": "கடைகளைத் தேடுகிறது…",
   "shops.none": "{km} கி.மீ.க்குள் கடைகள் இல்லை.",
   "shops.widen": "பரந்த பகுதியில் தேடு",
+  "shops.allTypes": "அனைத்தும்",
+  "shops.noneOfType": "அருகில் {type} கடைகள் இல்லை.",
   "shops.open": "இப்போது திறந்துள்ளது",
   "shops.closed": "மூடப்பட்டுள்ளது",
   "shops.away": "{km} கி.மீ. தொலைவில்",

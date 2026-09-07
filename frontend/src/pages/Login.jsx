@@ -57,17 +57,21 @@ export function Login({ onSignedIn }) {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-md flex-col px-5 py-8">
-      <header className="mb-8 flex items-center justify-between">
+    <div className="relative mx-auto flex min-h-dvh max-w-md flex-col overflow-hidden px-5 pb-8 pt-safe">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-40 right-0 -z-10 h-96 w-96 translate-x-1/3 rounded-[100%] bg-primary/10 blur-[90px]"
+      />
+      <header className="mb-8 flex items-center justify-between pt-6">
         <div>
-          <h1 className="text-3xl font-extrabold text-primary">{t('app.name')}</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight text-primary">{t('app.name')}</h1>
           <p className="text-base text-ink-soft">{t('app.tagline')}</p>
         </div>
         <LangToggle />
       </header>
 
       <main className="flex flex-1 flex-col justify-center">
-        <h2 className="mb-6 text-2xl font-bold">{t('login.title')}</h2>
+        <h2 className="mb-6 text-2xl font-extrabold tracking-tight">{t('login.title')}</h2>
 
         {step === STEP.PHONE && (
           <form onSubmit={sendCode} className="space-y-5">
@@ -81,7 +85,7 @@ export function Login({ onSignedIn }) {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder={t('login.phonePlaceholder')}
-                className="w-full rounded-xl2 border-2 border-sand bg-white px-4 py-4 text-2xl tracking-wide outline-none focus:border-primary"
+                className="w-full rounded-xl2 border border-sand bg-white px-4 py-4 text-2xl tracking-wide shadow-card outline-none transition-shadow focus:border-primary focus:shadow-[0_0_0_4px_rgba(124,58,237,0.12)]"
               />
             </label>
             <Button type="submit" icon="➡️" disabled={busy || phone.replace(/\D/g, '').length < 10}>
@@ -108,7 +112,7 @@ export function Login({ onSignedIn }) {
                 maxLength={6}
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                className="w-full rounded-xl2 border-2 border-sand bg-white px-4 py-4 text-center text-4xl tracking-[0.4em] outline-none focus:border-primary"
+                className="w-full rounded-xl2 border border-sand bg-white px-4 py-4 text-center text-4xl tracking-[0.4em] shadow-card outline-none transition-shadow focus:border-primary focus:shadow-[0_0_0_4px_rgba(124,58,237,0.12)]"
               />
             </label>
             <Button type="submit" icon="✅" disabled={busy || otp.length < 4}>
