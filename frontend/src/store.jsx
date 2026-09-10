@@ -221,6 +221,20 @@ export function StoreProvider({ children }) {
     [applyOrderUpdate],
   );
 
+  /** Shopper edits their pickup slot (allowed while PENDING / ACCEPTED). */
+  const updateOrderPickup = useCallback(
+    async (id, pickup_slot_label) => {
+      const { order } = await api(`/orders/${id}`, {
+        method: 'PATCH',
+        authed: true,
+        body: { pickup_slot_label },
+      });
+      applyOrderUpdate(order);
+      return order;
+    },
+    [applyOrderUpdate],
+  );
+
   const acceptOrder = useCallback((id) => transition(id, 'accept'), [transition]);
   const rejectOrder = useCallback(
     (id, reason) => transition(id, 'reject', reason || 'Item not available'),
@@ -287,6 +301,7 @@ export function StoreProvider({ children }) {
     refreshMyOrders,
     refreshQueue,
     placeOrder,
+    updateOrderPickup,
     acceptOrder,
     rejectOrder,
     markReady,

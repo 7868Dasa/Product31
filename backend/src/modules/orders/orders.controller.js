@@ -39,3 +39,12 @@ export async function transition(req, res) {
   });
   res.json({ order });
 }
+
+export async function updatePickup(req, res) {
+  const order = await service.updatePickup({
+    actorUserId: req.user.id,
+    orderId: req.params.id,
+    pickupSlotLabel: req.body.pickup_slot_label,
+  });
+  res.json({ order });
+}

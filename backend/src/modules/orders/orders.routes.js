@@ -15,6 +15,7 @@ import {
   orderIdParamSchema,
   shopOrdersQuerySchema,
   transitionSchema,
+  updatePickupSchema,
 } from './orders.schemas.js';
 
 export const ordersRouter = Router();
@@ -46,4 +47,10 @@ ordersRouter.post(
   requireAuth,
   validate({ params: orderIdParamSchema, body: transitionSchema }),
   asyncHandler(ctrl.transition),
+);
+ordersRouter.patch(
+  '/orders/:id',
+  requireAuth,
+  validate({ params: orderIdParamSchema, body: updatePickupSchema }),
+  asyncHandler(ctrl.updatePickup),
 );

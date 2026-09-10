@@ -77,6 +77,7 @@ function serializeOrder(order, items, { viewer, priceMode }) {
     acceptance_sla_minutes: order.acceptance_sla_minutes ?? order._sla ?? null,
     pickup_hold_minutes: order.pickup_hold_minutes ?? order._hold ?? null,
     prep_time_minutes: order.prep_time_minutes ?? order._prep ?? null,
+    shop_opening_hours: order.shop_opening_hours ?? order._hours ?? null,
     rejection_reason: order.rejection_reason || null,
     price_mode: priceMode,
     price_pending: hidePrice,
@@ -119,6 +120,7 @@ async function loadFull(orderId) {
       's.acceptance_sla_minutes as _sla',
       's.pickup_hold_minutes as _hold',
       's.prep_time_minutes as _prep',
+      's.opening_hours as _hours',
       'u.full_name as customer_name',
       'u.phone_number as customer_phone',
     );
@@ -414,6 +416,7 @@ export async function listMyOrders({ userId }) {
       's.acceptance_sla_minutes as _sla',
       's.pickup_hold_minutes as _hold',
       's.prep_time_minutes as _prep',
+      's.opening_hours as _hours',
     );
 
   const byOrder = await attachItems(rows);
@@ -439,6 +442,25 @@ export async function getOrder({ actorUserId, orderId }) {
     viewer: isOwner ? 'owner' : 'shopper',
     priceMode: shop.price_display_mode,
   });
+}
+
+/**
+ * Shopper changes their pickup slot. Allowed only while the order is still
+ * early (PENDING_ACCEPTANCE / ACCEPTED) — once it's packed the shop is
+ * already working to that time.
+ */
+export async function updatePickup({ actorUserId, orderId, pickupSlotLabel }) {
+  const { order, shop } = await loadFull(orderId);
+  if (order.user_id !== actorUserId) {
+    throw forbidden('NOT_YOUR_ORDER', 'You cannot change this order.');
+  }
+  if (![STATUS.PENDING_ACCEPTANCE, STATUS.ACCEPTED].includes(order.status)) {
+    throw conflict('PICKUP_LOCKED', 'This order is too far along to change the pickup time.');
+  }
+  await db('orders').where({ id: orderId }).update({ pickup_slot_label: pickupSlotLabel });
+
+  const { order: fresh, items } = await loadFull(orderId);
+  return serializeOrder(fresh, items, { viewer: 'shopper', priceMode: shop.price_display_mode });
 }
 
 // ── transition ───────────────────────────────────────────────────────────────

@@ -140,6 +140,7 @@ function serializeOrder(o, viewer, shop) {
     pickup_hold_minutes: (shop && shop.pickup_hold_minutes) || o.pickup_hold_minutes || 90,
     acceptance_sla_minutes: (shop && shop.acceptance_sla_minutes) || o.acceptance_sla_minutes || 5,
     prep_time_minutes: (shop && shop.prep_time_minutes) ?? o.prep_time_minutes ?? 10,
+    shop_opening_hours: (shop && shop.opening_hours) || o.shop_opening_hours || null,
     rejection_reason: o.rejection_reason || null,
     price_mode: mode,
     price_pending: hide,
@@ -478,6 +479,21 @@ export async function mockApi(path, { method = 'GET', body } = {}) {
     const o = list.find((x) => x.id === oneOrderMatch[1]);
     if (!o) throw new MockError(404, 'ORDER_NOT_FOUND', 'That order could not be found.');
     return { order: serializeOrder(o, o.mine ? 'shopper' : 'owner', shopFor(o.shop_slug)) };
+  }
+  if (oneOrderMatch && method === 'PATCH') {
+    const all = loadOrders();
+    const idx = all.findIndex((x) => x.id === oneOrderMatch[1]);
+    if (idx < 0) throw new MockError(404, 'ORDER_NOT_FOUND', 'That order could not be found.');
+    const o = all[idx];
+    if (![STATUS.PENDING_ACCEPTANCE, STATUS.ACCEPTED].includes(o.status)) {
+      throw new MockError(409, 'PICKUP_LOCKED', 'This order is too far along to change the pickup time.');
+    }
+    const label = String(body?.pickup_slot_label || '').trim().slice(0, 40);
+    if (!label) throw new MockError(400, 'INVALID', 'Pick a pickup time.');
+    const next = { ...o, pickup_slot_label: label };
+    all[idx] = next;
+    saveOrders(all);
+    return { order: serializeOrder(next, 'shopper', shopFor(next.shop_slug)) };
   }
 
   const transMatch = pathname.match(/^\/orders\/([^/]+)\/transitions$/);

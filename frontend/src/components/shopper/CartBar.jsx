@@ -3,27 +3,15 @@ import { ShoppingCart, Minus, Plus, Trash2, Check, Clock } from 'lucide-react';
 import { useI18n } from '../../i18n/index.jsx';
 import { useStore } from '../../store.jsx';
 import { Modal } from '../Modal.jsx';
-import { isWithinHours } from '../../lib/shopHours.js';
+import { pickupWindows } from '../../lib/shopHours.js';
 
-/** A pickup-slot option: ASAP + a few relative times, clamped to shop hours. */
+/** Pickup options: "As soon as possible" + hour windows ("around 1–2"). */
 function pickupSlots(shop, t, lang, now = new Date()) {
-  const prep = shop.prep_time_minutes ?? 10;
-  const locale = lang === 'ta' ? 'ta-IN' : 'en-IN';
-  const fmt = (d) => d.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
-  const roundUp5 = (d) => new Date(Math.ceil(d.getTime() / 300000) * 300000);
-
-  const out = [{ value: 'ASAP', label: t('cart.asap'), sub: t('cart.inMin', { n: prep }) }];
-  for (const mins of [30, 60, 120]) {
-    if (mins <= prep) continue;
-    const at = roundUp5(new Date(now.getTime() + mins * 60000));
-    if (!isWithinHours(shop.opening_hours, at)) continue; // shop would be shut
-    out.push({
-      value: fmt(at),
-      label: mins < 60 ? t('cart.inMin', { n: mins }) : t('cart.inHr', { n: mins / 60 }),
-      sub: fmt(at),
-    });
-  }
-  return out;
+  const { prep, windows } = pickupWindows(shop, now, lang);
+  return [
+    { value: 'ASAP', label: t('cart.asap'), sub: t('cart.inMin', { n: prep }) },
+    ...windows.map((w) => ({ value: w.value, label: t('cart.window', { w: w.label }) })),
+  ];
 }
 
 function qtyLabel(l) {

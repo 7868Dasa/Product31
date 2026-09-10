@@ -1,10 +1,74 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Store, RotateCcw, Check, PieChart, Clock } from 'lucide-react';
+import { Store, RotateCcw, Check, PieChart, Clock, Pencil } from 'lucide-react';
 import { useI18n } from '../i18n/index.jsx';
 import { useStore } from '../store.jsx';
 import { TopBar } from '../components/TopBar.jsx';
+import { Modal } from '../components/Modal.jsx';
 import { ACTIVE } from '../lib/orderState.js';
+import { pickupWindows } from '../lib/shopHours.js';
+
+const EDITABLE = ['PENDING_ACCEPTANCE', 'ACCEPTED'];
+
+/** Shopper changes the pickup slot on an order that hasn't been packed yet. */
+function ChangePickup({ order }) {
+  const { t, lang } = useI18n();
+  const { updateOrderPickup } = useStore();
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const { prep, windows } = pickupWindows(
+    { prep_time_minutes: order.prep_time_minutes, opening_hours: order.shop_opening_hours },
+    new Date(),
+    lang,
+  );
+  const opts = [
+    { value: 'ASAP', label: t('cart.asap'), sub: t('cart.inMin', { n: prep }) },
+    ...windows.map((w) => ({ value: w.value, label: t('cart.window', { w: w.label }) })),
+  ];
+
+  async function pick(value) {
+    setBusy(true);
+    try {
+      await updateOrderPickup(order.id, value);
+      setOpen(false);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="inline-flex items-center gap-1 text-xs font-bold text-primary active:opacity-60"
+      >
+        <Pencil size={12} /> {t('ord.changePickup')}
+      </button>
+      {open && (
+        <Modal title={t('ord.pickupTitle')} onClose={() => setOpen(false)}>
+          <div className="flex flex-wrap gap-2 py-1">
+            {opts.map((o) => (
+              <button
+                key={o.value}
+                disabled={busy}
+                onClick={() => pick(o.value)}
+                aria-pressed={order.pickup_slot_label === o.value}
+                className={`rounded-full border px-3.5 py-2 text-sm font-semibold transition-transform active:scale-95 disabled:opacity-50 ${
+                  order.pickup_slot_label === o.value
+                    ? 'border-primary bg-primary text-white'
+                    : 'border-sand bg-white text-ink-soft'
+                }`}
+              >
+                {o.label}
+                {o.sub && <span className="text-ink-faint"> · {o.sub}</span>}
+              </button>
+            ))}
+          </div>
+        </Modal>
+      )}
+    </>
+  );
+}
 
 const STEPS = ['placed', 'accepted', 'ready', 'collected'];
 const STEP_OF = {
@@ -121,15 +185,18 @@ function OrderCard({ order, onBuyAgain }) {
       )}
 
       {pickup && (
-        <p className="mt-1.5 flex items-start gap-1.5 text-sm font-medium text-primary-dark">
-          <Clock size={14} className="mt-0.5 shrink-0" />
-          <span>
-            {pickup}
-            {order.status === 'PENDING_ACCEPTANCE' && (
-              <span className="text-ink-faint"> · {t('pickup.label')}: {slot}</span>
-            )}
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium text-primary-dark">
+          <span className="flex items-start gap-1.5">
+            <Clock size={14} className="mt-0.5 shrink-0" />
+            <span>
+              {pickup}
+              {EDITABLE.includes(order.status) && (
+                <span className="text-ink-faint"> · {t('pickup.label')}: {slot}</span>
+              )}
+            </span>
           </span>
-        </p>
+          {EDITABLE.includes(order.status) && <ChangePickup order={order} />}
+        </div>
       )}
 
       <StatusBar status={order.status} t={t} />

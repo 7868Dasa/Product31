@@ -31,3 +31,9 @@ export const transitionSchema = z.object({
   action: z.enum(['accept', 'reject', 'ready', 'collect', 'no_show']),
   reason: z.string().trim().min(2).max(200).optional(),
 });
+
+// Shopper edits their own pickup time — only while the order is still early
+// (PENDING_ACCEPTANCE / ACCEPTED); the service enforces that.
+export const updatePickupSchema = z.object({
+  pickup_slot_label: z.string().trim().min(1).max(40),
+});

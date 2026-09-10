@@ -69,3 +69,36 @@ export function opensAtLabel(str, lang = 'en', now = new Date()) {
   const mins = now.getHours() * 60 + now.getMinutes();
   return mins < w.open ? fmt(w.open, lang) : fmt(w.open, lang); // next opening is today's open time
 }
+
+/**
+ * Hour-window pickup options: "around 1–2", "around 2–3", … from the soonest
+ * time the shop could have it ready (prep_time_minutes) up to closing time
+ * (or ~6 windows if hours are unknown).
+ *
+ * Each window carries `label` (localised, for the button) and `value` (a
+ * stable English string, stored as pickup_slot_label so the shopkeeper reads
+ * it the same regardless of app language).
+ */
+export function pickupWindows(shop, now = new Date(), lang = 'en') {
+  const prep = shop.prep_time_minutes ?? 10;
+  const w = parseDailyWindow(shop.opening_hours);
+  const soonestMin = now.getHours() * 60 + now.getMinutes() + prep;
+  const startH = Math.ceil(soonestMin / 60);
+  const closeH = w ? Math.floor(w.close / 60) : startH + 6;
+
+  const hr = (h, lc) => {
+    const d = new Date();
+    d.setHours(((h % 24) + 24) % 24, 0, 0, 0);
+    return d.toLocaleTimeString(lc === 'ta' ? 'ta-IN' : 'en-IN', { hour: 'numeric' });
+  };
+
+  const windows = [];
+  for (let h = startH; h < closeH && windows.length < 6; h += 1) {
+    windows.push({
+      id: String(h),
+      label: `${hr(h, lang)}–${hr(h + 1, lang)}`,
+      value: `around ${hr(h, 'en')}–${hr(h + 1, 'en')}`,
+    });
+  }
+  return { prep, windows };
+}
