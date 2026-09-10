@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { Store, Bell, BellOff, ChefHat, Boxes, QrCode, IndianRupee, ArrowLeftRight, Printer } from 'lucide-react';
+import { Store, Bell, BellOff, ChefHat, Boxes, QrCode, IndianRupee, ArrowLeftRight, Printer, Settings, Check } from 'lucide-react';
 import { useI18n } from '../../i18n/index.jsx';
 import { useStore } from '../../store.jsx';
 import { LangToggle } from '../../components/LangToggle.jsx';
@@ -50,6 +50,7 @@ const TABS = [
   { key: 'stock', icon: Boxes },
   { key: 'qr', icon: QrCode },
   { key: 'history', icon: IndianRupee },
+  { key: 'settings', icon: Settings },
 ];
 
 export function Dashboard() {
@@ -61,6 +62,7 @@ export function Dashboard() {
     refreshMyShop,
     isShopOpen,
     toggleShopOpen,
+    updateMyShop,
     acceptOrder,
     rejectOrder,
     markReady,
@@ -252,6 +254,8 @@ export function Dashboard() {
           {tab === 'stock' && <CatalogManager slug={shop.slug} />}
 
           {tab === 'qr' && <QrPanel shop={shop} t={t} />}
+
+          {tab === 'settings' && <SettingsPanel shop={shop} t={t} onSave={updateMyShop} />}
         </div>
       </div>
     </div>
@@ -278,6 +282,79 @@ function QrPanel({ shop, t }) {
         <Printer size={18} /> {t('qr.openPoster')}
       </Link>
       <p className="text-xs text-ink-faint">{t('qr.reprintNote')}</p>
+    </div>
+  );
+}
+
+const PREP_OPTIONS = [5, 10, 15, 20, 30, 45, 60];
+
+function SettingsPanel({ shop, t, onSave }) {
+  const [prep, setPrep] = useState(shop.prep_time_minutes ?? 10);
+  const [auto, setAuto] = useState(!!shop.auto_confirm);
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const dirty = prep !== (shop.prep_time_minutes ?? 10) || auto !== !!shop.auto_confirm;
+
+  async function save() {
+    setBusy(true);
+    setSaved(false);
+    try {
+      await onSave({ prep_time_minutes: Number(prep), auto_confirm: auto });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="card space-y-5 p-5">
+      <h3 className="text-lg font-extrabold tracking-tight">{t('sk.settings.title')}</h3>
+
+      <label className="block">
+        <span className="mb-1 block text-sm font-semibold">{t('sk.settings.prep')}</span>
+        <select
+          value={prep}
+          onChange={(e) => setPrep(Number(e.target.value))}
+          className="w-full appearance-none rounded-xl2 border border-sand bg-white px-4 py-3 text-base shadow-card outline-none focus:border-primary"
+        >
+          {PREP_OPTIONS.map((n) => (
+            <option key={n} value={n}>
+              {t('onb.prepMins', { n })}
+            </option>
+          ))}
+        </select>
+        <span className="mt-1 block text-xs text-ink-soft">{t('sk.settings.prepHint')}</span>
+      </label>
+
+      <label className="flex items-start gap-3 rounded-xl2 border border-sand bg-white px-4 py-3 shadow-card">
+        <input
+          type="checkbox"
+          className="mt-0.5 h-5 w-5 shrink-0 accent-primary"
+          checked={auto}
+          onChange={(e) => setAuto(e.target.checked)}
+        />
+        <span>
+          <span className="block text-sm font-semibold">{t('sk.settings.autoConfirm')}</span>
+          <span className="mt-0.5 block text-xs text-ink-soft">{t('sk.settings.autoConfirmHint')}</span>
+        </span>
+      </label>
+
+      <button
+        onClick={save}
+        disabled={busy || !dirty}
+        className="flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3 font-semibold text-white transition-transform active:scale-[0.98] active:bg-primary-dark disabled:opacity-50"
+      >
+        {saved ? (
+          <>
+            <Check size={18} /> {t('sk.settings.saved')}
+          </>
+        ) : busy ? (
+          t('common.loading')
+        ) : (
+          t('sk.settings.save')
+        )}
+      </button>
     </div>
   );
 }

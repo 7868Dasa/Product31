@@ -275,6 +275,7 @@ export async function mockApi(path, { method = 'GET', body } = {}) {
       acceptance_sla_minutes: 5,
       pickup_hold_minutes: 90,
       prep_time_minutes: d.prep_time_minutes ?? 10,
+      auto_confirm: !!d.auto_confirm,
       qr_generated_at: new Date().toISOString(),
     };
     try {
@@ -310,6 +311,7 @@ export async function mockApi(path, { method = 'GET', body } = {}) {
       'opening_hours',
       'price_display_mode',
       'prep_time_minutes',
+      'auto_confirm',
       'is_open',
     ];
     const next = { ...cur };
@@ -427,14 +429,16 @@ export async function mockApi(path, { method = 'GET', body } = {}) {
     if (!lines.length) throw new MockError(400, 'EMPTY_ORDER', 'Your cart is empty.');
 
     const now = new Date().toISOString();
+    const auto = !!shop.auto_confirm;
     const order = {
       id: `o${Date.now()}`,
       order_code: demoOrderCode(),
       shop_slug: slug,
       shop_name: shop.shop_name,
-      status: STATUS.PENDING_ACCEPTANCE,
+      status: auto ? STATUS.ACCEPTED : STATUS.PENDING_ACCEPTANCE,
       created_at: now,
       pending_acceptance_at: now,
+      ...(auto ? { accepted_at: now } : {}),
       pickup_slot_label: body?.pickup_slot_label || 'ASAP',
       idempotency_key: key,
       mine: true,

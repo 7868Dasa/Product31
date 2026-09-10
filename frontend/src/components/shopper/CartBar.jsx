@@ -3,14 +3,14 @@ import { ShoppingCart, Minus, Plus, Trash2, Check, Clock } from 'lucide-react';
 import { useI18n } from '../../i18n/index.jsx';
 import { useStore } from '../../store.jsx';
 import { Modal } from '../Modal.jsx';
-import { pickupWindows } from '../../lib/shopHours.js';
+import { pickupTimes } from '../../lib/shopHours.js';
 
-/** Pickup options: "As soon as possible" + hour windows ("around 1–2"). */
-function pickupSlots(shop, t, lang, now = new Date()) {
-  const { prep, windows } = pickupWindows(shop, now, lang);
+/** Dropdown options: "As soon as possible" + 24h clock times to closing. */
+function pickupSlots(shop, t, now = new Date()) {
+  const { prep, times } = pickupTimes(shop, now);
   return [
-    { value: 'ASAP', label: t('cart.asap'), sub: t('cart.inMin', { n: prep }) },
-    ...windows.map((w) => ({ value: w.value, label: t('cart.window', { w: w.label }) })),
+    { value: 'ASAP', label: `${t('cart.asap')} · ${t('cart.inMin', { n: prep })}` },
+    ...times.map((x) => ({ value: x.value, label: x.label })),
   ];
 }
 
@@ -38,10 +38,7 @@ export function CartBar({ shop }) {
   const [err, setErr] = useState(null);
   const [pickup, setPickup] = useState('ASAP');
 
-  const slots = useMemo(
-    () => (open ? pickupSlots(shop, t, lang) : []),
-    [open, shop, t, lang],
-  );
+  const slots = useMemo(() => (open ? pickupSlots(shop, t) : []), [open, shop, t]);
 
   async function submit() {
     setBusy(true);
@@ -142,27 +139,17 @@ export function CartBar({ shop }) {
             <p className="mb-2 flex items-center gap-1.5 text-sm font-bold tracking-tight">
               <Clock size={15} className="text-primary" /> {t('cart.whenCollect')}
             </p>
-            <div className="flex flex-wrap gap-2">
+            <select
+              value={pickup}
+              onChange={(e) => setPickup(e.target.value)}
+              className="w-full appearance-none rounded-xl2 border border-sand bg-white px-4 py-3 text-base font-semibold shadow-card outline-none focus:border-primary"
+            >
               {slots.map((s) => (
-                <button
-                  key={s.value}
-                  onClick={() => setPickup(s.value)}
-                  aria-pressed={pickup === s.value}
-                  className={`rounded-full border px-3.5 py-2 text-sm font-semibold transition-transform active:scale-95 ${
-                    pickup === s.value
-                      ? 'border-primary bg-primary text-white'
-                      : 'border-sand bg-white text-ink-soft'
-                  }`}
-                >
+                <option key={s.value} value={s.value}>
                   {s.label}
-                  {s.sub && s.sub !== s.label && (
-                    <span className={pickup === s.value ? 'text-white/75' : 'text-ink-faint'}>
-                      {' '}· {s.sub}
-                    </span>
-                  )}
-                </button>
+                </option>
               ))}
-            </div>
+            </select>
             <p className="mt-2 flex gap-1.5 text-xs text-ink-faint">
               <Clock size={13} className="mt-px shrink-0" />
               {t('cart.pickupNote', { prep: shop.prep_time_minutes ?? 10, hold })}
@@ -179,6 +166,11 @@ export function CartBar({ shop }) {
             <span className="flex h-16 w-16 animate-pop-in items-center justify-center rounded-full bg-go/15 text-go">
               <Check size={32} strokeWidth={2.5} />
             </span>
+            {placed.status === 'ACCEPTED' && (
+              <p className="flex items-center gap-1.5 text-sm font-bold text-go">
+                <Check size={15} /> {t('cart.placedConfirmed')}
+              </p>
+            )}
             <p className="text-base font-medium text-ink-soft">{t('cart.placedSub')}</p>
             <div className="w-full rounded-2xl bg-primary-wash px-4 py-5">
               <div className="font-mono text-4xl font-extrabold tracking-[0.22em] text-primary-dark">

@@ -71,34 +71,26 @@ export function opensAtLabel(str, lang = 'en', now = new Date()) {
 }
 
 /**
- * Hour-window pickup options: "around 1–2", "around 2–3", … from the soonest
- * time the shop could have it ready (prep_time_minutes) up to closing time
- * (or ~6 windows if hours are unknown).
+ * Pickup-time options for the dropdown: 24-hour clock times ("13:30", "14:00",
+ * …) at `stepMin` intervals, from the soonest the shop could have it ready
+ * (now + prep_time_minutes, rounded up) to closing time — or to end of day
+ * when the hours can't be parsed.
  *
- * Each window carries `label` (localised, for the button) and `value` (a
- * stable English string, stored as pickup_slot_label so the shopkeeper reads
- * it the same regardless of app language).
+ * `value` and `label` are the same "HH:MM" string: unambiguous, language-
+ * neutral, and what the shopkeeper sees on the order.
  */
-export function pickupWindows(shop, now = new Date(), lang = 'en') {
+export function pickupTimes(shop, now = new Date(), stepMin = 30) {
   const prep = shop.prep_time_minutes ?? 10;
   const w = parseDailyWindow(shop.opening_hours);
-  const soonestMin = now.getHours() * 60 + now.getMinutes() + prep;
-  const startH = Math.ceil(soonestMin / 60);
-  const closeH = w ? Math.floor(w.close / 60) : startH + 6;
+  const soonest = now.getHours() * 60 + now.getMinutes() + prep;
+  const start = Math.ceil(soonest / stepMin) * stepMin;
+  const end = w ? w.close : 24 * 60 - stepMin; // last slot today if hours unknown
+  const pad = (n) => String(n).padStart(2, '0');
 
-  const hr = (h, lc) => {
-    const d = new Date();
-    d.setHours(((h % 24) + 24) % 24, 0, 0, 0);
-    return d.toLocaleTimeString(lc === 'ta' ? 'ta-IN' : 'en-IN', { hour: 'numeric' });
-  };
-
-  const windows = [];
-  for (let h = startH; h < closeH && windows.length < 6; h += 1) {
-    windows.push({
-      id: String(h),
-      label: `${hr(h, lang)}–${hr(h + 1, lang)}`,
-      value: `around ${hr(h, 'en')}–${hr(h + 1, 'en')}`,
-    });
+  const times = [];
+  for (let m = start; m <= end && m < 24 * 60 && times.length < 48; m += stepMin) {
+    const hhmm = `${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
+    times.push({ value: hhmm, label: hhmm });
   }
-  return { prep, windows };
+  return { prep, times };
 }

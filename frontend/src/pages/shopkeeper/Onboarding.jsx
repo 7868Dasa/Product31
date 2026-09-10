@@ -14,6 +14,7 @@ const input =
   'w-full rounded-xl2 border border-sand bg-white px-4 py-3 text-base shadow-card outline-none transition-shadow focus:border-primary focus:shadow-[0_0_0_4px_rgba(124,58,237,0.12)]';
 
 const PRICE_MODES = ['exact', 'range', 'hidden'];
+const PREP_OPTIONS = [5, 10, 15, 20, 30, 45, 60];
 
 function Labeled({ label, hint, children }) {
   const { t } = useI18n();
@@ -52,6 +53,8 @@ export function Onboarding({ user, onSignedIn }) {
     latitude: '',
     longitude: '',
     price_display_mode: 'exact',
+    prep_time_minutes: 10,
+    auto_confirm: false,
   });
   const set = (k) => (e) => setF((p) => ({ ...p, [k]: e.target.value }));
 
@@ -121,6 +124,8 @@ export function Onboarding({ user, onSignedIn }) {
         address: f.address.trim(),
         opening_hours: f.opening_hours.trim() || undefined,
         price_display_mode: f.price_display_mode,
+        prep_time_minutes: Number(f.prep_time_minutes),
+        auto_confirm: !!f.auto_confirm,
         ...(f.latitude && f.longitude
           ? { latitude: Number(f.latitude), longitude: Number(f.longitude) }
           : {}),
@@ -299,6 +304,33 @@ export function Onboarding({ user, onSignedIn }) {
               </div>
               <p className="mt-1 text-xs text-ink-soft">{t(`onb.priceModeHint.${f.price_display_mode}`)}</p>
             </div>
+
+            <Labeled label={t('onb.prepTime')} hint={t('onb.prepTimeHint')}>
+              <select
+                className={`${input} appearance-none`}
+                value={f.prep_time_minutes}
+                onChange={set('prep_time_minutes')}
+              >
+                {PREP_OPTIONS.map((n) => (
+                  <option key={n} value={n}>
+                    {t('onb.prepMins', { n })}
+                  </option>
+                ))}
+              </select>
+            </Labeled>
+
+            <label className="flex items-start gap-3 rounded-xl2 border border-sand bg-white px-4 py-3 shadow-card">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-5 w-5 shrink-0 accent-primary"
+                checked={f.auto_confirm}
+                onChange={(e) => setF((p) => ({ ...p, auto_confirm: e.target.checked }))}
+              />
+              <span>
+                <span className="block text-sm font-semibold">{t('onb.autoConfirm')}</span>
+                <span className="mt-0.5 block text-xs text-ink-soft">{t('onb.autoConfirmHint')}</span>
+              </span>
+            </label>
 
             {err && <p className="text-sm font-semibold text-stop">⚠️ {err}</p>}
 

@@ -343,6 +343,21 @@ export async function placeOrder({ userId, slug, items, idempotencyKey, pickupSl
         changed_by: `user:${userId}`,
         note: null,
       });
+
+      // Auto-confirm: skip the manual accept gate (the shop still marks
+      // READY / COLLECTED by hand). Same transaction so it's all-or-nothing.
+      if (shop.auto_confirm) {
+        await trx('orders')
+          .where({ id: oid })
+          .update({ status: STATUS.ACCEPTED, accepted_at: trx.fn.now() });
+        await trx('order_status_history').insert({
+          order_id: oid,
+          from_status: STATUS.PENDING_ACCEPTANCE,
+          to_status: STATUS.ACCEPTED,
+          changed_by: 'system:auto_confirm',
+          note: 'auto-confirmed',
+        });
+      }
       return oid;
     });
   } catch (err) {
