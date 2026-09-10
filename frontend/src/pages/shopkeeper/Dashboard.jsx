@@ -44,14 +44,50 @@ function useNewOrderAlert(pending, t) {
   useEffect(() => () => setTitleBadge(0), []);
 }
 
-const TABS = [
+// Primary destinations — a fixed bottom bar (mobile-app pattern), so every
+// tab is visible and thumb-reachable instead of hidden in a scrolling row.
+const NAV_TABS = [
   { key: 'new', icon: Bell },
   { key: 'active', icon: ChefHat },
   { key: 'stock', icon: Boxes },
-  { key: 'qr', icon: QrCode },
   { key: 'history', icon: IndianRupee },
+  { key: 'qr', icon: QrCode },
   { key: 'settings', icon: Settings },
 ];
+
+function BottomTabs({ tab, setTab, newCount, t }) {
+  return (
+    <nav className="frost fixed inset-x-0 bottom-0 z-40 border-t border-sand/60 pb-safe">
+      <div className="mx-auto flex max-w-2xl">
+        {NAV_TABS.map(({ key, icon: Icon }) => {
+          const on = tab === key;
+          return (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              aria-current={on ? 'page' : undefined}
+              className={`flex min-w-0 flex-1 flex-col items-center justify-start gap-0.5 px-0.5 pb-1.5 pt-2 transition-colors ${
+                on ? 'text-primary' : 'text-ink-faint active:text-ink-soft'
+              }`}
+            >
+              <span className="relative">
+                <Icon size={22} strokeWidth={on ? 2.5 : 2} />
+                {key === 'new' && newCount > 0 && (
+                  <span className="absolute -right-2.5 -top-1 min-w-[16px] rounded-full bg-stop px-1 text-center text-[10px] font-extrabold leading-4 text-white">
+                    {newCount}
+                  </span>
+                )}
+              </span>
+              <span className="w-full truncate text-center text-[10px] font-bold leading-none">
+                {t(`sk.tab.${key}`)}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}
 
 export function Dashboard() {
   const { t } = useI18n();
@@ -186,35 +222,6 @@ export function Dashboard() {
       </header>
 
       <div className="mx-auto max-w-2xl px-4">
-        <nav className="-mx-1 mt-4 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {TABS.map(({ key, icon: Icon }) => {
-            const badge = key === 'new' ? groups.new.length : 0;
-            return (
-              <button
-                key={key}
-                onClick={() => setTab(key)}
-                className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-4 py-2.5 text-sm font-bold transition-colors ${
-                  tab === key
-                    ? 'border-primary bg-primary text-white shadow-[0_4px_12px_-3px_rgba(124,58,237,0.5)]'
-                    : 'border-sand bg-white text-ink-soft active:bg-sand-soft'
-                }`}
-              >
-                <Icon size={17} />
-                {t(`sk.tab.${key}`)}
-                {badge > 0 && (
-                  <span
-                    className={`rounded-full px-1.5 text-xs ${
-                      tab === key ? 'bg-white/25' : 'bg-primary text-white'
-                    }`}
-                  >
-                    {badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </nav>
-
         <div className="mt-4 space-y-3">
           {tab === 'new' &&
             (groups.new.length === 0 ? (
@@ -258,6 +265,8 @@ export function Dashboard() {
           {tab === 'settings' && <SettingsPanel shop={shop} t={t} onSave={updateMyShop} />}
         </div>
       </div>
+
+      <BottomTabs tab={tab} setTab={setTab} newCount={groups.new.length} t={t} />
     </div>
   );
 }
