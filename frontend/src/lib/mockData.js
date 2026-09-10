@@ -8,7 +8,7 @@ import { priceBand } from './price.js';
 // identity + how it's sold by default
 const P = {
   chicken: { name: 'Aachi Chicken Masala', name_ta: 'ஆச்சி சிக்கன் மசாலா', brand: 'Aachi', category: 'Masala & Spices', unit: 'g', icon: '🍗', variant_group: 'aachi-chicken-masala', sell_by: 'pack', base_unit: 'pcs' },
-  milk: { name: 'Aavin Milk', name_ta: 'ஆவின் பால்', brand: 'Aavin', category: 'Dairy', unit: 'ml', icon: '🥛', sell_by: 'pack', base_unit: 'pcs' },
+  milk: { name: 'Aavin Milk', name_ta: 'ஆவின் பால்', brand: 'Aavin', category: 'Dairy', unit: 'ml', icon: '🥛', variant_group: 'aavin-milk', sell_by: 'pack', base_unit: 'pcs' },
   salt: { name: 'Tata Salt', name_ta: 'டாடா உப்பு', brand: 'Tata', category: 'Essentials', unit: 'kg', icon: '🧂', sell_by: 'pack', base_unit: 'pcs' },
   boost: { name: 'Boost', name_ta: 'பூஸ்ட்', brand: 'Boost', category: 'Beverages', unit: 'g', icon: '🥤', sell_by: 'pack', base_unit: 'pcs' },
   bru: { name: 'Bru Coffee', name_ta: 'புரு காபி', brand: 'Bru', category: 'Beverages', unit: 'g', icon: '☕', sell_by: 'pack', base_unit: 'pcs' },
@@ -42,12 +42,13 @@ const WEIGHT_EXTRAS = { min_qty: 0.25, max_qty: 10, step_qty: 0.25 };
 const RAW_INVENTORY = {
   MRGNKLKI: [
     ['chicken', '50g', 22, 40], ['chicken', '100g', 40, 25], ['chicken', '1kg', 340, 6],
-    ['milk', '500ml', 28, 30], ['salt', '1kg', 28, 40], ['bru', '100g', 95, 10], ['marie', '150g', 30, 22],
+    ['milk', '500ml', 28, 30], ['milk', '1L', 54, 18],
+    ['salt', '1kg', 28, 40], ['bru', '100g', 95, 10], ['marie', '150g', 30, 22],
     ['rice', null, 62, 80], ['dal', null, 145, 55], ['sugar', null, 45, 60], ['oil', null, 155, 40],
     ['coconut', null, 35, 60],
   ],
   AMMAKLKI: [
-    ['chicken', '100g', 42, 0], ['milk', '500ml', 27, 60], ['salt', '1kg', 27, 55],
+    ['chicken', '100g', 42, 0], ['milk', '500ml', 27, 60], ['milk', '1L', 52, 24], ['salt', '1kg', 27, 55],
     ['boost', '500g', 245, 8], ['marie', '150g', 29, 30],
     ['rice', null, 60, 120], ['dal', null, 142, 40], ['sugar', null, 44, 70], ['oil', null, 152, 55],
   ],
@@ -59,7 +60,7 @@ const RAW_INVENTORY = {
     ['sugar', null, 42, 140], ['oil', null, 149, 80], ['coconut', null, 32, 200],
   ],
   BRTIKLKI: [
-    ['milk', '500ml', 28, 15], ['bru', '100g', 98, 6], ['marie', '150g', 31, 12],
+    ['milk', '500ml', 28, 15], ['milk', '1L', 55, 6], ['bru', '100g', 98, 6], ['marie', '150g', 31, 12],
     ['boost', '500g', 250, 3], ['salt', '1kg', 28, 10],
   ],
   KOVLKLKI: [
@@ -67,7 +68,7 @@ const RAW_INVENTORY = {
   ],
   SRVNKLKI: [
     ['bread', '400g', 45, 24], ['bun', null, 12, 40], ['cake', null, 30, 18],
-    ['marie', '150g', 30, 20], ['milk', '500ml', 28, 12],
+    ['marie', '150g', 30, 20], ['milk', '500ml', 28, 12], ['milk', '1L', 55, 8],
   ],
   ANNMKLKI: [
     ['teacup', null, 12, 200], ['teapowder', null, 320, 8],

@@ -21,8 +21,11 @@ export async function seed(knex) {
     { name: 'Aachi Chicken Masala', name_ta: 'ஆச்சி சிக்கன் மசாலா', brand: 'Aachi', category: 'Masala & Spices', unit: 'g', variant_group: 'aachi-chicken-masala', pack_size: '100g', default_sell_by: 'pack', base_unit: 'pcs', net_weight_value: 100, net_weight_unit: 'g', icon: '🍗' },
     { name: 'Aachi Chicken Masala', name_ta: 'ஆச்சி சிக்கன் மசாலா', brand: 'Aachi', category: 'Masala & Spices', unit: 'kg', variant_group: 'aachi-chicken-masala', pack_size: '1kg', default_sell_by: 'pack', base_unit: 'pcs', net_weight_value: 1, net_weight_unit: 'kg', icon: '🍗' },
 
+    // ── variant group: Aavin Milk (500ml / 1L) ───────────────────────
+    { name: 'Aavin Milk', name_ta: 'ஆவின் பால்', brand: 'Aavin', category: 'Dairy', unit: 'ml', variant_group: 'aavin-milk', pack_size: '500ml', default_sell_by: 'pack', base_unit: 'pcs', net_weight_value: 500, net_weight_unit: 'ml', icon: '🥛' },
+    { name: 'Aavin Milk', name_ta: 'ஆவின் பால்', brand: 'Aavin', category: 'Dairy', unit: 'ml', variant_group: 'aavin-milk', pack_size: '1L', default_sell_by: 'pack', base_unit: 'pcs', net_weight_value: 1, net_weight_unit: 'l', icon: '🥛' },
+
     // ── pack (single size) ────────────────────────────────────────────
-    { name: 'Aavin Milk', name_ta: 'ஆவின் பால்', brand: 'Aavin', category: 'Dairy', unit: 'ml', pack_size: '500ml', default_sell_by: 'pack', base_unit: 'pcs', net_weight_value: 500, net_weight_unit: 'ml', icon: '🥛' },
     { name: 'Tata Salt', name_ta: 'டாடா உப்பு', brand: 'Tata', category: 'Essentials', unit: 'kg', pack_size: '1kg', default_sell_by: 'pack', base_unit: 'pcs', net_weight_value: 1, net_weight_unit: 'kg', icon: '🧂' },
     { name: 'Boost', name_ta: 'பூஸ்ட்', brand: 'Boost', category: 'Beverages', unit: 'g', pack_size: '500g', default_sell_by: 'pack', base_unit: 'pcs', net_weight_value: 500, net_weight_unit: 'g', icon: '🥤' },
     { name: 'Bru Coffee', name_ta: 'புரு காபி', brand: 'Bru', category: 'Beverages', unit: 'g', pack_size: '100g', default_sell_by: 'pack', base_unit: 'pcs', net_weight_value: 100, net_weight_unit: 'g', icon: '☕' },

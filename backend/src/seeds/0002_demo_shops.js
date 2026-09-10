@@ -26,13 +26,15 @@ const SHOPS = [
 const WEIGHT_DEFAULTS = { min_qty: 0.25, max_qty: 10, step_qty: 0.25 };
 
 // [name, pack_size|null, price, stock_amount]
-// pack_size is only meaningful for the Aachi variant rows; weight/piece use null.
+// pack_size is meaningful for variant rows (Aachi Chicken Masala, Aavin Milk);
+// weight/piece rows use null.
 const INVENTORY = {
   MRGNKLKI: [
     ['Aachi Chicken Masala', '50g', 22, 40],
     ['Aachi Chicken Masala', '100g', 40, 25],
     ['Aachi Chicken Masala', '1kg', 340, 6],
     ['Aavin Milk', '500ml', 28, 30],
+    ['Aavin Milk', '1L', 54, 18],
     ['Tata Salt', '1kg', 28, 40],
     ['Bru Coffee', '100g', 95, 10],
     ['Marie Biscuit', '150g', 30, 22],
@@ -45,6 +47,7 @@ const INVENTORY = {
   AMMAKLKI: [
     ['Aachi Chicken Masala', '100g', 42, 0], // out of stock
     ['Aavin Milk', '500ml', 27, 60],
+    ['Aavin Milk', '1L', 52, 24],
     ['Tata Salt', '1kg', 27, 55],
     ['Boost', '500g', 245, 8],
     ['Marie Biscuit', '150g', 29, 30],
@@ -69,6 +72,7 @@ const INVENTORY = {
   ],
   BRTIKLKI: [
     ['Aavin Milk', '500ml', 28, 15],
+    ['Aavin Milk', '1L', 55, 6],
     ['Bru Coffee', '100g', 98, 6],
     ['Marie Biscuit', '150g', 31, 12],
     ['Boost', '500g', 250, 3], // low stock
@@ -85,6 +89,7 @@ const INVENTORY = {
   SRVNKLKI: [
     ['Marie Biscuit', '150g', 30, 24],
     ['Aavin Milk', '500ml', 28, 15],
+    ['Aavin Milk', '1L', 55, 8],
     ['Bru Coffee', '100g', 96, 8],
   ],
   ANNMKLKI: [
