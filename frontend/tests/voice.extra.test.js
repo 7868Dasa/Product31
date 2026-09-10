@@ -54,3 +54,35 @@ describe('scoreItem guard', () => {
     expect(scoreItem(tokenize('parle g biscuit'), CATALOG[2])).toBeLessThan(0.55);
   });
 });
+
+describe('multiple quantity of one pack item — the count-unit word must not break the match', () => {
+  it('"3 packet biscuit" -> Marie Biscuit, qty 3', () => {
+    const l = matchLine('3 packet biscuit', CATALOG, { lang: 'en' });
+    expect(l.matched_product_id).toBe('marie');
+    expect(l.quantity).toBe(3);
+  });
+
+  it('"moonu packet biscuit" (Tamil count) -> Marie Biscuit, qty 3', () => {
+    const l = matchLine('moonu packet biscuit', CATALOG, { lang: 'ta' });
+    expect(l.matched_product_id).toBe('marie');
+    expect(l.quantity).toBe(3);
+  });
+
+  it('"2 nos toor dal" (Indian-English count unit) -> Toor Dal, qty 2', () => {
+    const l = matchLine('2 nos toor dal', CATALOG, { lang: 'en' });
+    expect(l.matched_product_id).toBe('dal');
+    expect(l.quantity).toBe(2);
+  });
+
+  it('"ரெண்டு பாக்கெட் மேரி பிஸ்கட்" -> Marie Biscuit, qty 2', () => {
+    const l = matchLine('ரெண்டு பாக்கெட் மேரி பிஸ்கட்', CATALOG, { lang: 'ta' });
+    expect(l.matched_product_id).toBe('marie');
+    expect(l.quantity).toBe(2);
+  });
+
+  it('plain "3 biscuit" still works (regression)', () => {
+    const l = matchLine('3 biscuit', CATALOG, { lang: 'en' });
+    expect(l.matched_product_id).toBe('marie');
+    expect(l.quantity).toBe(3);
+  });
+});

@@ -4,6 +4,16 @@
  * weights, and a filler/stopword list meant to grow from real usage.
  */
 
+// Count-unit words a shopper says alongside a number for pack / piece items
+// ("3 packet biscuit", "moonu packet biscuit", "2 pieces coconut"). They are
+// noise for the product match — the number is already taken by extractAmount,
+// so drop the unit word too or it pollutes the query and breaks the match.
+export const COUNT_UNITS = new Set([
+  'packet', 'packets', 'pack', 'packs', 'pkt', 'pkts', 'sachet', 'sachets',
+  'piece', 'pieces', 'pcs', 'pc', 'nos', 'no',
+  'பாக்கெட்', 'பாக்கெட்டு', 'பாக்கட்', 'பாக்கெட்ஸ்', 'துண்டு', 'துண்டுகள்',
+]);
+
 // Fillers / politeness / connectives to drop before matching. Both scripts.
 export const FILLERS = new Set([
   // english
@@ -17,6 +27,8 @@ export const FILLERS = new Set([
   'வேண்டும்', 'வேணும்', 'வேணுங்க', 'கொடு', 'கொடுங்க', 'தா', 'தாருங்க',
   'ஒரு', 'கொஞ்சம்', 'இல்லை', 'சரி', 'அப்புறம்', 'பின்னே', 'இன்னொரு', 'இன்னும்',
   'எனக்கு',
+  // count-unit words (see COUNT_UNITS)
+  ...COUNT_UNITS,
 ]);
 
 // Whole number words → integer. Romanised + Tamil script.
