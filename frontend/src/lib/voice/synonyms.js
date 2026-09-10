@@ -16,15 +16,27 @@ export const SYNONYMS = [
   [['chicken powder', 'chicken masala powder', 'kozhi masala', 'கோழி மசாலா', 'கோழி பொடி'], 'chicken masala'],
   [['masala podi', 'masala powder', 'மசாலா பொடி'], 'masala'],
 
-  [['paal', 'பால்', 'milk packet', 'பால் பாக்கெட்'], 'milk'],
-  [['paruppu', 'பருப்பு', 'dhal', 'dhall', 'daal', 'thuvaram paruppu', 'துவரம் பருப்பு'], 'toor dal'],
-  [['arisi', 'அரிசி', 'idli arisi', 'இட்லி அரிசி'], 'idli rice'],
-  [['ennai', 'எண்ணெய்', 'cooking oil', 'சமையல் எண்ணெய்', 'sunflower ennai'], 'sunflower oil'],
-  [['uppu', 'உப்பு'], 'salt'],
-  [['sarkkarai', 'சர்க்கரை', 'chini', 'seeni'], 'sugar'],
-  [['kaapi', 'காபி', 'coffee podi', 'காபி பொடி'], 'coffee'],
-  [['biskoot', 'biskut', 'பிஸ்கட்', 'biscuits'], 'biscuit'],
-  [['thengai', 'தேங்காய்', 'nariyal', 'coconut piece'], 'coconut'],
+  [['paal', 'pal', 'paalu', 'பால்', 'milk packet', 'பால் பாக்கெட்', 'aavin paal', 'ஆவின் பால்'], 'milk'],
+  [
+    ['paruppu', 'parupu', 'paruppo', 'பருப்பு', 'dhal', 'dhall', 'daal',
+     'thuvaram paruppu', 'thuvaramparuppu', 'துவரம் பருப்பு'],
+    'toor dal',
+  ],
+  [['arisi', 'arisee', 'arasi', 'அரிசி', 'idli arisi', 'idly arisi', 'இட்லி அரிசி'], 'idli rice'],
+  [
+    ['ennai', 'enney', 'எண்ணெய்', 'cooking oil', 'சமையல் எண்ணெய்', 'sunflower ennai',
+     'sunflower', 'சூரியகாந்தி எண்ணெய்'],
+    'sunflower oil',
+  ],
+  [['uppu', 'உப்பு', 'crystal salt', 'table salt'], 'salt'],
+  [['sarkkarai', 'sarkarai', 'sakkarai', 'சர்க்கரை', 'chini', 'cheeni', 'seeni'], 'sugar'],
+  [['kaapi', 'kapi', 'காபி', 'coffee podi', 'coffee powder', 'காபி பொடி', 'filter coffee'], 'coffee'],
+  [['biskoot', 'biskut', 'biscut', 'பிஸ்கட்', 'பிஸ்கட்டு', 'biscuits'], 'biscuit'],
+  [['thengai', 'thenga', 'தேங்காய்', 'nariyal', 'coconut piece'], 'coconut'],
+  [['rotti', 'ரொட்டி', 'bread packet', 'ப்ரெட்', 'milk bread'], 'bread'],
+  [['bun', 'பன்', 'cream bun', 'sweet bun'], 'bun'],
+  [['tea', 'டீ', 'chai', 'tea kadai', 'hot tea', 'சூடான டீ'], 'tea'],
+  [['tea powder', 'theyilai', 'தேயிலை', 'தேயிலைத் தூள்', 'tea dust'], 'tea powder'],
 ];
 
 const norm = (s) => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();

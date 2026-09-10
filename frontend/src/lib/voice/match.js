@@ -19,6 +19,7 @@ import {
 } from './normalize.js';
 import { phoneticEq } from './phonetics.js';
 import { applySynonyms } from './synonyms.js';
+import { hasTamil, romanize } from './translit.js';
 
 // ── fuzzy string similarity ────────────────────────────────────────────
 export function levenshtein(a, b) {
@@ -50,11 +51,17 @@ export function similarity(a, b) {
 }
 
 function bestTokenHit(token, haystackTokens) {
+  const tRoman = hasTamil(token) ? romanize(token) : null;
   let best = 0;
   for (const h of haystackTokens) {
     let s = similarity(token, h);
+    // Cross-script: a Tamil-script token vs a Latin one (or vice versa) has
+    // ~0 edit-distance similarity — compare romanised forms so "பிஸ்கட்"
+    // ("piskat") can still hit "biscuit".
+    if (tRoman && !hasTamil(h)) s = Math.max(s, similarity(tRoman, h));
+    else if (!tRoman && hasTamil(h)) s = Math.max(s, similarity(token, romanize(h)));
     // Layer 1: a phonetic match counts as a strong hit even if the letters
-    // are off ("chickween" ≡ "chicken", "aachy" ≡ "aachi").
+    // are off ("chickween" ≡ "chicken", "aachy" ≡ "aachi", ழ/ள/ல swaps).
     if (s < 0.85 && phoneticEq(token, h)) s = Math.max(s, 0.9);
     if (s > best) best = s;
     if (best === 1) break;
@@ -66,6 +73,7 @@ function itemSearchTokens(item) {
   return [
     ...tokenize(item.name || ''),
     ...tokenize(item.name_ta || ''),
+    ...tokenize(romanize(item.name_ta || '')), // Tamil name, romanised — cross-script haystack
     ...tokenize(item.brand || ''),
   ];
 }

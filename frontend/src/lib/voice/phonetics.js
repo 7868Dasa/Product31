@@ -5,15 +5,19 @@
  * sound alike:  "chickween" ≡ "chicken" (XKN),  "aachy" ≡ "aachi" (AX).
  * Real noise still fails:  "briyani" (PRN) ≠ "chicken" (XKN).
  *
- * Latin script only — Tamil-script tokens fall back to edit distance
- * against `name_ta`, which already works.
+ * Tamil-script tokens are romanised first (translit.js), so "பிஸ்கட்"
+ * ("piskat") lands near "biscuit" phonetically instead of only via edit
+ * distance against `name_ta`.
  */
 import { doubleMetaphone } from 'double-metaphone';
+import { hasTamil, romanize, skeletonEq } from './translit.js';
 
 export function phoneticKey(token) {
-  if (!token || !/[a-z]/i.test(token) || token.length < 3) return null;
+  if (!token) return null;
+  const t = hasTamil(token) ? romanize(token) : token;
+  if (!/[a-z]/i.test(t) || t.length < 3) return null;
   try {
-    const [primary] = doubleMetaphone(token);
+    const [primary] = doubleMetaphone(t);
     return primary || null;
   } catch {
     return null;
@@ -22,6 +26,9 @@ export function phoneticKey(token) {
 
 /** Do two tokens sound the same (or one is a phonetic prefix of the other)? */
 export function phoneticEq(a, b) {
+  // Tamil consonant-class skeleton — catches ழ/ள/ல, ண/ன/ந, ற/ர swaps that
+  // metaphone (Latin-trained) misses.
+  if ((hasTamil(a) || hasTamil(b)) && skeletonEq(a, b)) return true;
   const ka = phoneticKey(a);
   const kb = phoneticKey(b);
   if (!ka || !kb) return false;

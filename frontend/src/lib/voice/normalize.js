@@ -3,6 +3,7 @@
  * Tamil + English, Tamil script and romanised, quantity words + fractions +
  * weights, and a filler/stopword list meant to grow from real usage.
  */
+import { cleanUnicode } from './translit.js';
 
 // Count-unit words a shopper says alongside a number for pack / piece items
 // ("3 packet biscuit", "moonu packet biscuit", "2 pieces coconut"). They are
@@ -65,7 +66,7 @@ const UNIT_ALIASES = {
 const WEIGHT_UNITS = new Set(['g', 'kg', 'ml', 'l']);
 
 export function normalizeText(input) {
-  return String(input || '')
+  return cleanUnicode(input)
     .toLowerCase()
     .replace(/[.,!?;:()"'`]/g, ' ')
     .replace(/(\d)\s*\.\s*(\d)/g, '$1.$2') // keep "2 . 5" -> "2.5"
@@ -75,7 +76,7 @@ export function normalizeText(input) {
 
 export function tokenize(input) {
   // keep a decimal point inside numbers
-  return String(input || '')
+  return cleanUnicode(input)
     .toLowerCase()
     .replace(/[,!?;:()"'`]/g, ' ')
     .replace(/(\d)\s*\.\s*(\d)/g, '$1.$2')
