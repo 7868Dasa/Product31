@@ -79,7 +79,10 @@ export function OrderCard({ order, slaMinutes = 5, onAccept, onReject, onReady, 
       </div>
       <div className="flex items-center justify-between text-base font-bold">
         <span>
-          {t('sk.pickup')}: {order.pickup_slot_label}
+          {t('sk.pickup')}:{' '}
+          {!order.pickup_slot_label || order.pickup_slot_label === 'ASAP'
+            ? t('pickup.asap')
+            : order.pickup_slot_label}
         </span>
         <span>
           {t('sk.total')} ₹{order.subtotal_amount}

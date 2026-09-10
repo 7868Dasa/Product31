@@ -137,6 +137,9 @@ function serializeOrder(o, viewer, shop) {
     collected_at: o.collected_at || null,
     no_show_at: o.no_show_at || null,
     pickup_slot_label: o.pickup_slot_label || 'ASAP',
+    pickup_hold_minutes: (shop && shop.pickup_hold_minutes) || o.pickup_hold_minutes || 90,
+    acceptance_sla_minutes: (shop && shop.acceptance_sla_minutes) || o.acceptance_sla_minutes || 5,
+    prep_time_minutes: (shop && shop.prep_time_minutes) ?? o.prep_time_minutes ?? 10,
     rejection_reason: o.rejection_reason || null,
     price_mode: mode,
     price_pending: hide,
@@ -270,6 +273,7 @@ export async function mockApi(path, { method = 'GET', body } = {}) {
       is_open: false,
       acceptance_sla_minutes: 5,
       pickup_hold_minutes: 90,
+      prep_time_minutes: d.prep_time_minutes ?? 10,
       qr_generated_at: new Date().toISOString(),
     };
     try {
@@ -304,6 +308,7 @@ export async function mockApi(path, { method = 'GET', body } = {}) {
       'longitude',
       'opening_hours',
       'price_display_mode',
+      'prep_time_minutes',
       'is_open',
     ];
     const next = { ...cur };

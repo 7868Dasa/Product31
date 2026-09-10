@@ -11,6 +11,7 @@ export const createShopSchema = z.object({
   longitude: z.coerce.number().gte(-180).lte(180).optional(),
   opening_hours: z.string().trim().max(120).optional(),
   price_display_mode: z.enum(['exact', 'range', 'hidden']).default('exact'),
+  prep_time_minutes: z.coerce.number().int().min(0).max(120).optional(),
 });
 
 export const updateShopSchema = z
@@ -24,6 +25,7 @@ export const updateShopSchema = z
     longitude: z.coerce.number().gte(-180).lte(180),
     opening_hours: z.string().trim().max(120),
     price_display_mode: z.enum(['exact', 'range', 'hidden']),
+    prep_time_minutes: z.coerce.number().int().min(0).max(120),
     is_open: z.boolean(),
   })
   .partial()

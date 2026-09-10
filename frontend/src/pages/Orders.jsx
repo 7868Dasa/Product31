@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Store, RotateCcw, Check, PieChart } from 'lucide-react';
+import { Store, RotateCcw, Check, PieChart, Clock } from 'lucide-react';
 import { useI18n } from '../i18n/index.jsx';
 import { useStore } from '../store.jsx';
 import { TopBar } from '../components/TopBar.jsx';
@@ -19,6 +19,24 @@ function timeAgo(iso, t) {
   if (s < 3600) return t('time.min', { n: Math.floor(s / 60) || 1 });
   if (s < 86400) return t('time.hr', { n: Math.floor(s / 3600) });
   return t('time.day', { n: Math.floor(s / 86400) });
+}
+
+/** Status-aware "when to collect" line for an active order. */
+function pickupNote(order, t, lang) {
+  const hold = order.pickup_hold_minutes || 90;
+  if (order.status === 'PENDING_ACCEPTANCE') return t('ord.pickup.waiting');
+  if (order.status === 'ACCEPTED') return t('ord.pickup.packing');
+  if (order.status === 'READY_FOR_PICKUP') {
+    if (!order.ready_at) return t('ord.pickup.readySoon');
+    const by = new Date(new Date(order.ready_at).getTime() + hold * 60000);
+    return t('ord.pickup.readyBy', {
+      time: by.toLocaleTimeString(lang === 'ta' ? 'ta-IN' : 'en-IN', {
+        hour: 'numeric',
+        minute: '2-digit',
+      }),
+    });
+  }
+  return null;
 }
 
 function StatusBar({ status, t }) {
@@ -46,6 +64,11 @@ function StatusBar({ status, t }) {
 
 function OrderCard({ order, onBuyAgain }) {
   const { t, lang } = useI18n();
+  const pickup = pickupNote(order, t, lang);
+  const slot =
+    order.pickup_slot_label && order.pickup_slot_label !== 'ASAP'
+      ? order.pickup_slot_label
+      : t('pickup.asap');
   const count = order.items.reduce((n, i) => n + (i.quantity < 1 ? 1 : Math.round(i.quantity)), 0);
   const summary = order.items
     .map((i) => (lang === 'ta' && i.name_ta ? i.name_ta : i.name))
@@ -94,6 +117,18 @@ function OrderCard({ order, onBuyAgain }) {
       {order.status === 'REJECTED' && order.rejection_reason && (
         <p className="mt-1 text-sm text-stop">
           {t('ord.rejectedReason', { reason: order.rejection_reason })}
+        </p>
+      )}
+
+      {pickup && (
+        <p className="mt-1.5 flex items-start gap-1.5 text-sm font-medium text-primary-dark">
+          <Clock size={14} className="mt-0.5 shrink-0" />
+          <span>
+            {pickup}
+            {order.status === 'PENDING_ACCEPTANCE' && (
+              <span className="text-ink-faint"> · {t('pickup.label')}: {slot}</span>
+            )}
+          </span>
         </p>
       )}
 

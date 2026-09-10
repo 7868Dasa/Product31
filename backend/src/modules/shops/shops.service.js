@@ -21,6 +21,7 @@ const SHOP_FIELDS = [
   'is_open',
   'acceptance_sla_minutes',
   'pickup_hold_minutes',
+  'prep_time_minutes',
   'price_display_mode',
   'opening_hours',
   'qr_generated_at',
@@ -139,6 +140,7 @@ export async function createShop(ownerUserId, data) {
       longitude: data.longitude ?? null,
       opening_hours: data.opening_hours ?? null,
       price_display_mode: data.price_display_mode ?? 'exact',
+      ...(data.prep_time_minutes != null ? { prep_time_minutes: data.prep_time_minutes } : {}),
       slug,
       qr_generated_at: db.fn.now(),
       is_open: false, // shop starts closed until the owner flips it
@@ -165,6 +167,7 @@ export async function updateShop(ownerUserId, slug, patch) {
     'longitude',
     'opening_hours',
     'price_display_mode',
+    'prep_time_minutes',
     'is_open',
   ];
   const fields = {};

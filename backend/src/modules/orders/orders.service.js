@@ -74,6 +74,9 @@ function serializeOrder(order, items, { viewer, priceMode }) {
     collected_at: iso(order.collected_at),
     no_show_at: iso(order.no_show_at),
     pickup_slot_label: order.pickup_slot_label || 'ASAP',
+    acceptance_sla_minutes: order.acceptance_sla_minutes ?? order._sla ?? null,
+    pickup_hold_minutes: order.pickup_hold_minutes ?? order._hold ?? null,
+    prep_time_minutes: order.prep_time_minutes ?? order._prep ?? null,
     rejection_reason: order.rejection_reason || null,
     price_mode: priceMode,
     price_pending: hidePrice,
@@ -114,6 +117,8 @@ async function loadFull(orderId) {
       's.owner_user_id as _owner_user_id',
       's.price_display_mode as _price_mode',
       's.acceptance_sla_minutes as _sla',
+      's.pickup_hold_minutes as _hold',
+      's.prep_time_minutes as _prep',
       'u.full_name as customer_name',
       'u.phone_number as customer_phone',
     );
@@ -377,7 +382,14 @@ export async function listShopQueue({ ownerUserId, slug, status }) {
   else if (status) q.where({ status });
   const rows = await q.orderBy('created_at', 'asc'); // queue: oldest first
 
-  const withShop = rows.map((r) => ({ ...r, shop_slug: shop.slug, shop_name: shop.shop_name }));
+  const withShop = rows.map((r) => ({
+    ...r,
+    shop_slug: shop.slug,
+    shop_name: shop.shop_name,
+    acceptance_sla_minutes: shop.acceptance_sla_minutes,
+    pickup_hold_minutes: shop.pickup_hold_minutes,
+    prep_time_minutes: shop.prep_time_minutes,
+  }));
   const byOrder = await attachItems(withShop);
   return withShop.map((o) =>
     serializeOrder(o, byOrder.get(o.id) || [], {
@@ -394,7 +406,15 @@ export async function listMyOrders({ userId }) {
     .join('shops as s', 's.id', 'o.shop_id')
     .where('o.user_id', userId)
     .orderBy('o.created_at', 'desc')
-    .select('o.*', 's.slug as shop_slug', 's.shop_name as shop_name', 's.price_display_mode as _price_mode');
+    .select(
+      'o.*',
+      's.slug as shop_slug',
+      's.shop_name as shop_name',
+      's.price_display_mode as _price_mode',
+      's.acceptance_sla_minutes as _sla',
+      's.pickup_hold_minutes as _hold',
+      's.prep_time_minutes as _prep',
+    );
 
   const byOrder = await attachItems(rows);
   return rows.map((o) =>

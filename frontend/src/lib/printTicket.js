@@ -62,7 +62,11 @@ export function printOrderTicket(order, t, lang = 'en') {
   <div class="tot"><span>${esc(t('sk.total'))}</span><span>${total}</span></div>
   <div class="foot">
     ${esc(t('sk.customer'))}: ${esc(order.customer_name || '')}<br>
-    ${esc(t('sk.pickup'))}: ${esc(order.pickup_slot_label || 'ASAP')}<br>
+    ${esc(t('sk.pickup'))}: ${esc(
+      !order.pickup_slot_label || order.pickup_slot_label === 'ASAP'
+        ? t('pickup.asap')
+        : order.pickup_slot_label,
+    )}<br>
     ${esc(t('cart.codNote'))}
   </div>
   <script>window.onload = function () { window.print(); setTimeout(function () { window.close(); }, 300); };<\/script>

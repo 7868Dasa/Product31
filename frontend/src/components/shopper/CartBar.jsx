@@ -1,8 +1,30 @@
-import { useState } from 'react';
-import { ShoppingCart, Minus, Plus, Trash2, Check } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { ShoppingCart, Minus, Plus, Trash2, Check, Clock } from 'lucide-react';
 import { useI18n } from '../../i18n/index.jsx';
 import { useStore } from '../../store.jsx';
 import { Modal } from '../Modal.jsx';
+import { isWithinHours } from '../../lib/shopHours.js';
+
+/** A pickup-slot option: ASAP + a few relative times, clamped to shop hours. */
+function pickupSlots(shop, t, lang, now = new Date()) {
+  const prep = shop.prep_time_minutes ?? 10;
+  const locale = lang === 'ta' ? 'ta-IN' : 'en-IN';
+  const fmt = (d) => d.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
+  const roundUp5 = (d) => new Date(Math.ceil(d.getTime() / 300000) * 300000);
+
+  const out = [{ value: 'ASAP', label: t('cart.asap'), sub: t('cart.inMin', { n: prep }) }];
+  for (const mins of [30, 60, 120]) {
+    if (mins <= prep) continue;
+    const at = roundUp5(new Date(now.getTime() + mins * 60000));
+    if (!isWithinHours(shop.opening_hours, at)) continue; // shop would be shut
+    out.push({
+      value: fmt(at),
+      label: mins < 60 ? t('cart.inMin', { n: mins }) : t('cart.inHr', { n: mins / 60 }),
+      sub: fmt(at),
+    });
+  }
+  return out;
+}
 
 function qtyLabel(l) {
   if (l.sell_by === 'weight') {
@@ -26,12 +48,18 @@ export function CartBar({ shop }) {
   const [placed, setPlaced] = useState(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
+  const [pickup, setPickup] = useState('ASAP');
+
+  const slots = useMemo(
+    () => (open ? pickupSlots(shop, t, lang) : []),
+    [open, shop, t, lang],
+  );
 
   async function submit() {
     setBusy(true);
     setErr(null);
     try {
-      const order = await placeOrder(shop.slug);
+      const order = await placeOrder(shop.slug, { pickup });
       setPlaced(order);
       setOpen(false);
     } catch (e) {
@@ -46,6 +74,8 @@ export function CartBar({ shop }) {
 
   const nameOf = (l) => (lang === 'ta' && l.name_ta ? l.name_ta : l.name);
   const stepOf = (l) => (l.sell_by === 'weight' ? l.step_qty || 0.25 : 1);
+  const hold = shop.pickup_hold_minutes || 90;
+  const slotLabel = (v) => (!v || v === 'ASAP' ? t('pickup.asap') : v);
 
   return (
     <>
@@ -119,7 +149,39 @@ export function CartBar({ shop }) {
           >
             <Trash2 size={14} /> {t('cart.clear')}
           </button>
-          <p className="mt-3 text-xs text-ink-soft">{t('cart.codNote')}</p>
+
+          <div className="mt-4 border-t border-sand/70 pt-3">
+            <p className="mb-2 flex items-center gap-1.5 text-sm font-bold tracking-tight">
+              <Clock size={15} className="text-primary" /> {t('cart.whenCollect')}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {slots.map((s) => (
+                <button
+                  key={s.value}
+                  onClick={() => setPickup(s.value)}
+                  aria-pressed={pickup === s.value}
+                  className={`rounded-full border px-3.5 py-2 text-sm font-semibold transition-transform active:scale-95 ${
+                    pickup === s.value
+                      ? 'border-primary bg-primary text-white'
+                      : 'border-sand bg-white text-ink-soft'
+                  }`}
+                >
+                  {s.label}
+                  {s.sub && s.sub !== s.label && (
+                    <span className={pickup === s.value ? 'text-white/75' : 'text-ink-faint'}>
+                      {' '}· {s.sub}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 flex gap-1.5 text-xs text-ink-faint">
+              <Clock size={13} className="mt-px shrink-0" />
+              {t('cart.pickupNote', { prep: shop.prep_time_minutes ?? 10, hold })}
+            </p>
+          </div>
+
+          <p className="mt-3 text-xs text-ink-faint">{t('cart.codNote')}</p>
         </Modal>
       )}
 
@@ -135,7 +197,9 @@ export function CartBar({ shop }) {
                 {placed.order_code}
               </div>
             </div>
-            <p className="text-sm text-ink-soft">{t('cart.placedHint')}</p>
+            <p className="text-sm text-ink-soft">
+              {t('cart.placedHint', { hold, slot: slotLabel(placed.pickup_slot_label) })}
+            </p>
           </div>
         </Modal>
       )}
