@@ -28,6 +28,7 @@ Status: ☐ not started · ◐ in progress · ☑ done (code) · ⚖ awaiting le
 | Children's data — no under-18 without parental consent | LEGAL / DEV | ◐ age-confirmation checkbox on consent screen; ToS clause |
 | Cross-border transfer disclosure (Supabase US, Groq US, etc.) | LEGAL | ☐ list processors + regions in the privacy policy |
 | Data Processing Agreements with processors | LEGAL | ☐ Supabase, MSG91, Resend, FCM, (Groq/Sarvam if used) |
+| Voice ordering: OS speech recognizer is a 3rd-party processor (Google/Apple); no audio stored, transcript only | DEV / LEGAL | ◐ disclosed in `/legal/privacy` + in-app note; add Google & Apple to processor list + DPAs. See `docs/mobile/CAPACITOR_VOICE.md` |
 
 ## 2. IT Act 2000 §79 + Intermediary Rules 2021 (safe harbour)
 
@@ -112,9 +113,12 @@ integration, digital-goods refund policy) — deferred out of Phase 1.
 
 | Item | Owner | Status |
 |---|---|---|
-| Play Data Safety form | YOU | ☐ |
-| Apple Privacy Nutrition Labels | YOU | ☐ |
-| Mic permission rationale (Web Speech sends audio to Google — disclose) | DEV / LEGAL | ☐ |
+| Play Data Safety form | YOU | ☐ — voice: audio accessed, not stored/shared; see `docs/mobile/CAPACITOR_VOICE.md` §5 |
+| Apple Privacy Nutrition Labels | YOU | ☐ — Audio Data: not collected (transcript only) |
+| Mic + speech permission rationale (point-of-use; audio → OS recognizer Google/Apple; transcript only) | DEV / LEGAL | ☑ strings in `docs/mobile/CAPACITOR_VOICE.md` §2–3; in-app note `voice.privacyNote`; denied-state handled |
+| iOS `NSMicrophoneUsageDescription` + `NSSpeechRecognitionUsageDescription` (EN + TA) | DEV | ☐ add to `Info.plist` on `cap add ios` |
+| Android `RECORD_AUDIO` + `<queries>` RecognitionService | DEV | ☐ verify on `cap add android` |
+| Reviewer notes cover voice (mic only while listening; EN + TA sample phrase) | YOU | ☐ |
 | Location permission rationale | DEV | ☐ |
 | Android App Links / iOS Universal Links `.well-known` files | DEV | ☐ build step 14 |
 

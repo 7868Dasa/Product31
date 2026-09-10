@@ -151,7 +151,10 @@
   "voice.listening": "Listening…",
   "voice.noSpeech": "Didn't catch that — try again or type it.",
   "voice.micError": "Microphone unavailable — type your order instead.",
-  "voice.unsupported": "Voice isn't available in this browser — type your order.",
+  "voice.unsupported": "Voice isn't available on this device — type your order.",
+  "voice.micDenied": "Microphone access is off. Turn it on in Settings to order by voice, or just type your order.",
+  "voice.micDismissed": "No problem — tap the mic when you're ready, or type your order.",
+  "voice.privacyNote": "Your speech is turned into text by your phone's voice service (Google on Android, Apple on iPhone). We keep only the text of your order.",
 
   "cart.count": "{n} in cart",
   "cart.review": "Review",

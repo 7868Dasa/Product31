@@ -19,8 +19,10 @@ export function Privacy() {
         <li><b>Orders</b> — items, quantities, price, pickup status, for the shop to fulfil.</li>
         <li><b>Device / security data</b> — IP, browser, and auth events, kept for security and to
           meet CERT-In log requirements.</li>
-        <li><b>Voice</b> — if you use voice ordering, speech is processed by your browser’s speech
-          service (on Android, Google’s). We store only the resulting text and what you ordered.</li>
+        <li><b>Voice</b> — voice ordering is optional; it starts only when you tap the mic. Your
+          speech is turned into text by your device’s speech service (Google on Android, Apple on
+          iPhone, or your browser’s on the web). Product 31 does not record or store audio — we
+          keep only the resulting text and what you ordered.</li>
       </ul>
 
       <H>Why we use it (purpose)</H>

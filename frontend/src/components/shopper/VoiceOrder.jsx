@@ -2,7 +2,7 @@ import { useMemo, useRef, useState, useEffect } from 'react';
 import { Mic, MicOff, Send, Sparkles, Volume2, VolumeX } from 'lucide-react';
 import { useI18n } from '../../i18n/index.jsx';
 import { useStore } from '../../store.jsx';
-import { asrSupported, createRecognizer } from '../../lib/voice/asr.js';
+import { asrSupported, prepareAsr, createRecognizer } from '../../lib/voice/asr.js';
 import { createSession, ingest } from '../../lib/voice/session.js';
 import { ttsSupported, primeVoices, canSpeak, speak, cancelSpeech } from '../../lib/voice/tts.js';
 import { logVoiceMiss } from '../../lib/voice/misses.js';
@@ -120,7 +120,7 @@ export function VoiceOrder({ shop, items }) {
     .filter(Boolean);
   const rowsTotal = rows.reduce((s, r) => s + r.total, 0);
 
-  function toggleMic() {
+  async function toggleMic() {
     if (listening) {
       recRef.current?.stop();
       return;
@@ -128,6 +128,20 @@ export function VoiceOrder({ shop, items }) {
     setNote(null);
     setInterim('');
     cancelSpeech();
+
+    // Capability check + one-time permission prompt (no-op on web).
+    const prep = await prepareAsr();
+    if (!prep.ok) {
+      setNote(
+        prep.reason === 'denied'
+          ? t('voice.micDenied')
+          : prep.reason === 'dismissed'
+            ? t('voice.micDismissed')
+            : t('voice.unsupported'),
+      );
+      return;
+    }
+
     const rec = createRecognizer({
       lang,
       onResult: ({ interim: iv, final }) => {
@@ -139,7 +153,13 @@ export function VoiceOrder({ shop, items }) {
       },
       onError: (code) => {
         setListening(false);
-        setNote(code === 'no-speech' ? t('voice.noSpeech') : t('voice.micError'));
+        setNote(
+          code === 'no-speech'
+            ? t('voice.noSpeech')
+            : code === 'not-allowed'
+              ? t('voice.micDenied')
+              : t('voice.micError'),
+        );
       },
       onEnd: () => setListening(false),
     });
@@ -173,6 +193,7 @@ export function VoiceOrder({ shop, items }) {
         )}
       </div>
       <p className="mt-1 text-sm text-ink-soft">{t(lang === 'ta' ? 'voice.hintTa' : 'voice.hintEn')}</p>
+      {supported && <p className="mt-1 text-xs text-ink-faint">{t('voice.privacyNote')}</p>}
       {ttsAvailable && voiceOn && noVoiceForLang && (
         <p className="mt-1 text-xs text-ink-soft">{t('voice.noVoiceForLang')}</p>
       )}
