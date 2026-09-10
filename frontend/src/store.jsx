@@ -21,7 +21,6 @@ const SHOPSTATE_KEY = 'p31.demo.shopstate';
 const CATALOG_KEY = 'p31.demo.catalog';
 const MYSHOP_KEY = 'p31.demo.myshop';
 const CART_KEY = 'p31.demo.cart';
-const REPORT_KEY = 'p31.demo.report_unlocked';
 const FAV_KEY = 'p31.favshops'; // array of favourited shop objects (per device)
 const ORDERS_KEY = 'p31.demo.orders'; // owned by mockApi; cleared by resetDemoOrders
 
@@ -70,14 +69,12 @@ export function StoreProvider({ children }) {
   );
   const [myShop, setMyShop] = useState(() => load(MYSHOP_KEY, null));
   const [cart, setCart] = useState(() => load(CART_KEY, {}));
-  const [reportUnlocked, setReportUnlocked] = useState(() => load(REPORT_KEY, false));
   const [favShops, setFavShops] = useState(() => load(FAV_KEY, []));
 
   // Backend-backed caches.
   const [myOrdersList, setMyOrdersList] = useState([]);
   const [queues, setQueues] = useState({}); // slug -> orders[]
 
-  useEffect(() => save(REPORT_KEY, reportUnlocked), [reportUnlocked]);
   // favShops persistence is owned by the API layer (mockApi in demo); the
   // useState initialiser reads FAV_KEY once for an instant first paint.
   useEffect(() => save(ROLE_KEY, role), [role]);
@@ -297,14 +294,8 @@ export function StoreProvider({ children }) {
     resetDemoOrders,
     hasActiveOrder: () => myOrdersList.some((o) => ACTIVE.includes(o.status)),
 
-    /** Free: the spending report over the shopper's own orders. */
+    /** The spending report over the shopper's own orders — free, incl. the PDF. */
     spendReport: () => buildSpendReport(myOrdersList),
-    reportUnlocked,
-    /** Demo: simulate the one-time ₹29 unlock (no real charge). */
-    unlockSpendReport: () => {
-      setReportUnlocked(true);
-      return { unlocked: true, amount: 29, currency: 'INR', demo: true, at: new Date().toISOString() };
-    },
 
     // ── favourite shops ───────────────────────────────────────────────
     favShops,

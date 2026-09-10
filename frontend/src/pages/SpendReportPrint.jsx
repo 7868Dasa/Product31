@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Navigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Printer, ArrowLeft } from 'lucide-react';
 import { useI18n } from '../i18n/index.jsx';
 import { useStore } from '../store.jsx';
@@ -14,20 +14,19 @@ const fmtDate = (iso, lang) =>
     : '—';
 
 /**
- * Printable spending report (the ₹29 deliverable). The page IS the document;
+ * Printable spending report — free in Phase 1. The page IS the document;
  * "Print / Save as PDF" uses the browser dialog — zero deps, same pattern as
- * the shop poster. Production serves a real pdfkit file from
- * GET /api/v1/users/me/spend-report.pdf (gated on the paid unlock).
+ * the shop poster. Production can later serve a real pdfkit file from
+ * GET /api/v1/users/me/spend-report.pdf.
  */
 export function SpendReportPrint({ user }) {
   const { t, lang } = useI18n();
-  const { spendReport, refreshMyOrders, reportUnlocked } = useStore();
+  const { spendReport, refreshMyOrders } = useStore();
 
   useEffect(() => {
     refreshMyOrders();
   }, [refreshMyOrders]);
 
-  if (!reportUnlocked) return <Navigate to="/orders/report" replace />;
   const r = spendReport();
 
   return (

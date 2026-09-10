@@ -1,10 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { ChevronLeft, FileDown, Lock, Check, Store } from 'lucide-react';
+import { ChevronLeft, FileDown, Store } from 'lucide-react';
 import { useI18n } from '../i18n/index.jsx';
 import { useStore } from '../store.jsx';
 import { TopBar } from '../components/TopBar.jsx';
-import { REPORT_PRICE_INR } from '../lib/spend.js';
 
 const monthLabel = (m, lang) =>
   new Date(`${m}-01`).toLocaleDateString(lang === 'ta' ? 'ta-IN' : 'en-IN', {
@@ -17,9 +16,8 @@ const dateLabel = (iso, lang) =>
 export function SpendReport({ user }) {
   const { t, lang } = useI18n();
   const navigate = useNavigate();
-  const { spendReport, refreshMyOrders, reportUnlocked, unlockSpendReport } = useStore();
+  const { spendReport, refreshMyOrders } = useStore();
   const r = spendReport();
-  const [paid, setPaid] = useState(null);
 
   useEffect(() => {
     refreshMyOrders();
@@ -106,36 +104,18 @@ export function SpendReport({ user }) {
               </section>
             )}
 
-            {/* ── paid PDF ─────────────────────────────────────────────── */}
+            {/* ── printable PDF (free) ─────────────────────────────────── */}
             <section className="rounded-xl2 border-2 border-primary/30 bg-primary-tint/40 p-4">
               <h2 className="flex items-center gap-2 text-base font-bold">
                 <FileDown size={18} className="text-primary" /> {t('spend.pdfTitle')}
               </h2>
               <p className="mt-1 text-sm text-ink-soft">{t('spend.pdfDesc')}</p>
-
-              {reportUnlocked || paid ? (
-                <button
-                  onClick={() => navigate('/orders/report/print')}
-                  className="mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3 font-semibold text-white active:bg-primary-dark"
-                >
-                  <FileDown size={18} /> {t('spend.download')}
-                </button>
-              ) : (
-                <>
-                  <button
-                    onClick={() => setPaid(unlockSpendReport())}
-                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3 font-semibold text-white active:bg-primary-dark"
-                  >
-                    <Lock size={16} /> {t('spend.unlock', { price: REPORT_PRICE_INR })}
-                  </button>
-                  <p className="mt-2 text-xs text-ink-soft">{t('spend.payNote')}</p>
-                </>
-              )}
-              {paid && (
-                <p className="mt-2 flex items-center gap-1.5 text-sm font-semibold text-go">
-                  <Check size={15} /> {t('spend.paidDemo', { price: REPORT_PRICE_INR })}
-                </p>
-              )}
+              <button
+                onClick={() => navigate('/orders/report/print')}
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3 font-semibold text-white active:bg-primary-dark"
+              >
+                <FileDown size={18} /> {t('spend.download')}
+              </button>
             </section>
           </>
         )}

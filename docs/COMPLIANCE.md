@@ -74,15 +74,20 @@ Status: ☐ not started · ◐ in progress · ☑ done (code) · ⚖ awaiting le
 
 ## 6. Payments
 
+**Phase 1 takes no money through the app — at all.** Cash on Pickup only; the
+spending report and its printable PDF are free. This keeps the store binary
+100% physical-commerce, which is explicitly exempt from Apple IAP and Google
+Play Billing. A paid in-app digital feature (e.g. a report unlock) would be
+"digital content" and force IAP/Play Billing (15–30% cut, StoreKit/Billing
+integration, digital-goods refund policy) — deferred out of Phase 1.
+
 | Item | Owner | Status |
 |---|---|---|
 | **Cash-on-pickup ordering: no online payment** → no RBI PA licence, no PCI-DSS, no escrow | DECISION | ☑ hold this line |
-| **Exception: one-time ₹29 unlock for the spending-report PDF** (a paid digital feature) | DECISION | ◐ schema `report_purchases`; UI built with a DEMO stub — no real charge yet |
-| Gateway integration (Razorpay/Cashfree/PhonePe) — they hold the PA licence; we never touch card data | DEV / YOU | ☐ needs a merchant account |
-| GST registration + **GST-compliant invoice** for the ₹29 (digital service = 18%; decide ₹29 inclusive vs +GST) | CA | ☐ |
-| Digital-goods **refund policy** ("no refund once the PDF is delivered") stated in Terms | LEGAL | ☐ |
-| One-time only → **no RBI e-mandate / recurring-payment** framework needed | — | ☑ scoped that way deliberately |
-| If a recurring subscription is added later: RBI e-mandate, pre-debit notice, AFA | LEGAL / DEV | ☐ future |
+| **Spending-report PDF is free** (no in-app purchase anywhere in the app) | DECISION | ☑ built free; `report_purchases` schema removed |
+| No IAP / Play Billing surface → avoids the store digital-goods commission + review friction | DECISION | ☑ |
+| One-time / recurring payment frameworks (RBI e-mandate, pre-debit notice, AFA) | — | ☑ N/A — no payments |
+| **Future phase**, if a paid digital feature is added: gateway (Razorpay/Cashfree/PhonePe), GST-compliant invoice (digital service = 18%), digital-goods refund policy in Terms, **and** Apple IAP / Play Billing (mandatory for in-app digital goods) | LEGAL / DEV / YOU | ☐ deferred |
 
 ## 7. Business & tax
 

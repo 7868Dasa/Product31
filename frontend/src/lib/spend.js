@@ -1,6 +1,10 @@
 /**
- * Spending report — pure aggregation over a shopper's orders. The data is
- * free; the PDF export is gated behind a one-time ₹29 unlock.
+ * Spending report — pure aggregation over a shopper's orders.
+ *
+ * Phase 1: the report AND its printable PDF are free. Product 31 takes no
+ * online payment at all (Cash on Pickup only) — a paid in-app feature would
+ * be "digital content" and drag the store binary into Apple IAP / Play
+ * Billing. See docs/COMPLIANCE.md §6.
  */
 const PAID = ['COLLECTED'];
 const PENDING = ['PENDING_ACCEPTANCE', 'ACCEPTED', 'READY_FOR_PICKUP'];
@@ -68,5 +72,3 @@ export function buildSpendReport(allOrders) {
 function round(n) {
   return Math.round((n + Number.EPSILON) * 100) / 100;
 }
-
-export const REPORT_PRICE_INR = 29;
