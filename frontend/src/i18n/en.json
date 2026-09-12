@@ -119,6 +119,7 @@
   "shops.allTypes": "All",
   "shops.noneOfType": "No {type} shops nearby.",
   "shops.myShops": "My shops",
+  "shops.reorderTitle": "Reorder",
   "shops.fav": "Add to my shops",
   "shops.unfav": "Remove from my shops",
   "shops.open": "Open now",

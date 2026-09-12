@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Star } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Star, RotateCcw } from 'lucide-react';
 import { useI18n } from '../i18n/index.jsx';
 import { useStore } from '../store.jsx';
 import { api } from '../lib/api.js';
@@ -15,9 +16,30 @@ import {
 
 const RADII = [5, 15, 25];
 
+/** One quick-pick card: the shopper's most recent COLLECTED order at a shop. */
+function ReorderCard({ order, lang, t, onReorder }) {
+  const summary = (order.items || [])
+    .map((i) => (lang === 'ta' && i.name_ta ? i.name_ta : i.name))
+    .slice(0, 3)
+    .join(', ');
+  return (
+    <button
+      onClick={() => onReorder(order)}
+      className="card w-56 shrink-0 snap-start p-3.5 text-left transition-transform active:scale-[0.98]"
+    >
+      <div className="truncate font-bold tracking-tight">{order.shop_name || order.shop_slug}</div>
+      <div className="mt-0.5 truncate text-xs text-ink-soft">{summary}</div>
+      <div className="mt-2 flex items-center gap-1.5 text-sm font-bold text-primary">
+        <RotateCcw size={14} /> {t('orders.buyAgain')}
+      </div>
+    </button>
+  );
+}
+
 export function ShopList({ user }) {
-  const { t } = useI18n();
-  const { favShops, refreshFavShops } = useStore();
+  const { t, lang } = useI18n();
+  const navigate = useNavigate();
+  const { favShops, refreshFavShops, myOrders, refreshMyOrders, buyAgain } = useStore();
   const [loc, setLoc] = useState(initialLocation);
   const [radius, setRadius] = useState(5);
   const [state, setState] = useState({ status: 'loading', shops: [] });
@@ -41,7 +63,25 @@ export function ShopList({ user }) {
 
   useEffect(() => {
     refreshFavShops();
-  }, [refreshFavShops]);
+    refreshMyOrders();
+  }, [refreshFavShops, refreshMyOrders]);
+
+  // Quick-pick: the most recent COLLECTED order at each shop the shopper has
+  // actually picked up from — one tap reloads that order's items into a
+  // fresh cart for that shop. Newest shop first, capped so it stays a strip.
+  const reorders = useMemo(() => {
+    const bySlug = new Map();
+    for (const o of myOrders()) {
+      if (o.status !== 'COLLECTED' || bySlug.has(o.shop_slug)) continue;
+      bySlug.set(o.shop_slug, o); // /orders/mine is already newest-first
+    }
+    return [...bySlug.values()].slice(0, 6);
+  }, [myOrders]);
+
+  function onReorder(order) {
+    const slug = buyAgain(order);
+    navigate(`/s/${slug}`);
+  }
 
   async function useMyLocation() {
     setLocating(true);
@@ -105,6 +145,19 @@ export function ShopList({ user }) {
                 <div key={s.slug} className="animate-fade-up">
                   <ShopCard shop={s} />
                 </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {reorders.length > 0 && (
+          <section className="mt-5">
+            <h2 className="mb-2 flex items-center gap-1.5 text-sm font-extrabold uppercase tracking-wide text-ink-faint">
+              <RotateCcw size={14} className="text-primary" /> {t('shops.reorderTitle')}
+            </h2>
+            <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {reorders.map((o) => (
+                <ReorderCard key={o.id} order={o} lang={lang} t={t} onReorder={onReorder} />
               ))}
             </div>
           </section>
