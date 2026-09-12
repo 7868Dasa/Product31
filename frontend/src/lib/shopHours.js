@@ -12,6 +12,9 @@
 const AMPM = /(\d{1,2})(?::(\d{2}))?\s*([ap])\.?m\.?/i;
 const H24 = /(\d{1,2}):(\d{2})/;
 
+/** Prep-time choices offered in both onboarding and the dashboard settings. */
+export const PREP_OPTIONS = [5, 10, 15, 20, 30, 45, 60];
+
 function toMinutes(token) {
   const t = token.trim();
   let m = AMPM.exec(t);

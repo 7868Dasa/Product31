@@ -8,6 +8,7 @@ import { OrderCard } from '../../components/shopkeeper/OrderCard.jsx';
 import { CatalogManager } from '../../components/shopkeeper/CatalogManager.jsx';
 import { QrImage } from '../../components/QrImage.jsx';
 import { shopShareUrl } from '../../lib/qr.js';
+import { PREP_OPTIONS } from '../../lib/shopHours.js';
 import {
   beep,
   notify,
@@ -298,8 +299,6 @@ function QrPanel({ shop, t }) {
     </div>
   );
 }
-
-const PREP_OPTIONS = [5, 10, 15, 20, 30, 45, 60];
 
 function SettingsPanel({ shop, t, onSave }) {
   const [prep, setPrep] = useState(shop.prep_time_minutes ?? 10);

@@ -7,6 +7,7 @@ import { api, auth, ApiError } from '../../lib/api.js';
 import { requestBrowserLocation } from '../../lib/location.js';
 import { shopShareUrl } from '../../lib/qr.js';
 import { SHOP_CATEGORIES } from '../../lib/categories.js';
+import { PREP_OPTIONS } from '../../lib/shopHours.js';
 import { QrImage } from '../../components/QrImage.jsx';
 import { LangToggle } from '../../components/LangToggle.jsx';
 
@@ -14,7 +15,6 @@ const input =
   'w-full rounded-xl2 border border-sand bg-white px-4 py-3 text-base shadow-card outline-none transition-shadow focus:border-primary focus:shadow-[0_0_0_4px_rgba(124,58,237,0.12)]';
 
 const PRICE_MODES = ['exact', 'range', 'hidden'];
-const PREP_OPTIONS = [5, 10, 15, 20, 30, 45, 60];
 
 function Labeled({ label, hint, children }) {
   const { t } = useI18n();

@@ -84,8 +84,10 @@ export async function sendRejectionSms(phone, order) {
           {
             mobiles: phone.replace(/^\+/, ''),
             // DLT template vars — kept minimal, no PII beyond the shop name.
+            // Must match the variable slots on the registered MSG91_REJECT_TEMPLATE_ID.
             code: order.order_code,
             shop: order.shop_name,
+            reason: order.reason || '',
           },
         ],
       }),
