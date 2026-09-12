@@ -259,6 +259,114 @@ describe.skipIf(!dbUp)('order lifecycle (needs Postgres)', () => {
     expect(hist).toBeTruthy();
   });
 
+  it('walks partial fulfilment: flag -> confirm reduces the subtotal', async () => {
+    const [order] = await db('orders')
+      .insert({
+        order_code: 'PART',
+        user_id: shopperId,
+        shop_id: shopId,
+        status: 'ACCEPTED',
+        idempotency_key: `k-${tag}-part1`,
+        subtotal_amount: 205,
+        accepted_at: db.fn.now(),
+      })
+      .returning('id');
+    const [riceLine, dalLine] = await db('order_items')
+      .insert([
+        { order_id: order.id, product_id: riceId, product_name: 'Rice', quantity: 1, unit_price: 60, line_total: 60 },
+        { order_id: order.id, product_id: dalId, product_name: 'Dal', quantity: 1, unit_price: 145, line_total: 145 },
+      ])
+      .returning(['id']);
+
+    const flagRes = await request(app)
+      .post(`/api/v1/orders/${order.id}/transitions`)
+      .set(auth(ownerTok))
+      .send({ action: 'flag_unavailable', unavailable_item_ids: [dalLine.id] });
+    expect(flagRes.status).toBe(200);
+    expect(flagRes.body.order.status).toBe('PENDING_CONFIRMATION');
+    expect(flagRes.body.order.revised_subtotal).toBe(60);
+    expect(flagRes.body.order.items.find((i) => i.id === dalLine.id).unavailable).toBe(true);
+    expect(flagRes.body.order.items.find((i) => i.id === riceLine.id).unavailable).toBe(false);
+
+    // Only the shopper who placed it can confirm or cancel — not the shop.
+    const forbiddenRes = await request(app)
+      .post(`/api/v1/orders/${order.id}/transitions`)
+      .set(auth(ownerTok))
+      .send({ action: 'confirm_reduced' });
+    expect(forbiddenRes.status).toBe(403);
+
+    const confirmRes = await request(app)
+      .post(`/api/v1/orders/${order.id}/transitions`)
+      .set(auth(shopperTok))
+      .send({ action: 'confirm_reduced' });
+    expect(confirmRes.status).toBe(200);
+    expect(confirmRes.body.order.status).toBe('ACCEPTED');
+    expect(confirmRes.body.order.subtotal_amount).toBe(60);
+  });
+
+  it('flagging every remaining line is refused — the shop should reject instead', async () => {
+    const [order] = await db('orders')
+      .insert({
+        order_code: 'PART2',
+        user_id: shopperId,
+        shop_id: shopId,
+        status: 'ACCEPTED',
+        idempotency_key: `k-${tag}-part2`,
+        subtotal_amount: 60,
+        accepted_at: db.fn.now(),
+      })
+      .returning('id');
+    const [riceLine] = await db('order_items')
+      .insert({
+        order_id: order.id,
+        product_id: riceId,
+        product_name: 'Rice',
+        quantity: 1,
+        unit_price: 60,
+        line_total: 60,
+      })
+      .returning(['id']);
+
+    const res = await request(app)
+      .post(`/api/v1/orders/${order.id}/transitions`)
+      .set(auth(ownerTok))
+      .send({ action: 'flag_unavailable', unavailable_item_ids: [riceLine.id] });
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('NOTHING_LEFT_TO_CONFIRM');
+  });
+
+  it('shopper can cancel a reduced order instead of confirming', async () => {
+    const [order] = await db('orders')
+      .insert({
+        order_code: 'PART3',
+        user_id: shopperId,
+        shop_id: shopId,
+        status: 'ACCEPTED',
+        idempotency_key: `k-${tag}-part3`,
+        subtotal_amount: 205,
+        accepted_at: db.fn.now(),
+      })
+      .returning('id');
+    const [, dalLine] = await db('order_items')
+      .insert([
+        { order_id: order.id, product_id: riceId, product_name: 'Rice', quantity: 1, unit_price: 60, line_total: 60 },
+        { order_id: order.id, product_id: dalId, product_name: 'Dal', quantity: 1, unit_price: 145, line_total: 145 },
+      ])
+      .returning(['id']);
+
+    await request(app)
+      .post(`/api/v1/orders/${order.id}/transitions`)
+      .set(auth(ownerTok))
+      .send({ action: 'flag_unavailable', unavailable_item_ids: [dalLine.id] });
+
+    const cancelRes = await request(app)
+      .post(`/api/v1/orders/${order.id}/transitions`)
+      .set(auth(shopperTok))
+      .send({ action: 'cancel_order' });
+    expect(cancelRes.status).toBe(200);
+    expect(cancelRes.body.order.status).toBe('CANCELLED');
+  });
+
   it('a rejection still succeeds even though SMS is not configured (best-effort)', async () => {
     const [o] = await db('orders')
       .insert({

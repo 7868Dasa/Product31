@@ -103,6 +103,7 @@ export function Dashboard() {
     rejectOrder,
     markReady,
     markCollected,
+    flagUnavailable,
   } = useStore();
   const [tab, setTab] = useState('new');
 
@@ -133,7 +134,9 @@ export function Dashboard() {
   const groups = useMemo(
     () => ({
       new: orders.filter((o) => o.status === 'PENDING_ACCEPTANCE'),
-      active: orders.filter((o) => ['ACCEPTED', 'READY_FOR_PICKUP'].includes(o.status)),
+      active: orders.filter((o) =>
+        ['ACCEPTED', 'PENDING_CONFIRMATION', 'READY_FOR_PICKUP'].includes(o.status),
+      ),
       history: orders.filter((o) => o.status === 'COLLECTED'),
     }),
     [orders],
@@ -162,6 +165,7 @@ export function Dashboard() {
     onReject: (id) => rejectOrder(id).catch(onErr),
     onReady: (id) => markReady(id).catch(onErr),
     onCollected: (id) => markCollected(id).catch(onErr),
+    onFlagUnavailable: (id, itemIds) => flagUnavailable(id, itemIds).catch(onErr),
   };
 
   return (

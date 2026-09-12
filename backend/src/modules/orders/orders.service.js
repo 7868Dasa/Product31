@@ -29,6 +29,7 @@ import {
   stampFor,
   needsReason,
   computeTotals,
+  planPartialFulfilment,
 } from '../../lib/orderState.js';
 
 const iso = (v) => (v ? new Date(v).toISOString() : null);
@@ -73,6 +74,9 @@ function serializeOrder(order, items, { viewer, priceMode }) {
     ready_at: iso(order.ready_at),
     collected_at: iso(order.collected_at),
     no_show_at: iso(order.no_show_at),
+    flagged_at: iso(order.flagged_at),
+    confirmed_at: iso(order.confirmed_at),
+    cancelled_at: iso(order.cancelled_at),
     pickup_slot_label: order.pickup_slot_label || 'ASAP',
     acceptance_sla_minutes: order.acceptance_sla_minutes ?? order._sla ?? null,
     pickup_hold_minutes: order.pickup_hold_minutes ?? order._hold ?? null,
@@ -83,6 +87,7 @@ function serializeOrder(order, items, { viewer, priceMode }) {
     price_pending: hidePrice,
     mine: viewer === 'shopper',
     items: items.map((it) => ({
+      id: it.id,
       name: it.product_name,
       name_ta: it.name_ta || null,
       pack_size: it.pack_size || null,
@@ -90,12 +95,20 @@ function serializeOrder(order, items, { viewer, priceMode }) {
       sell_by: it.sell_by || 'pack',
       unit: it.unit || 'pack',
       price_basis: it.price_basis || 'per_pack',
+      unavailable: Boolean(it.unavailable),
       ...(hidePrice
         ? {}
         : { unit_price: Number(it.unit_price), line_total: Number(it.line_total) }),
     })),
     ...(hidePrice ? {} : { subtotal_amount: Number(order.subtotal_amount) }),
   };
+
+  // While a reduction is awaiting the shopper's decision, surface the total
+  // they'd actually pay if they confirm — the stored subtotal_amount still
+  // reflects the original order until confirm_reduced writes the new figure.
+  if (order.status === STATUS.PENDING_CONFIRMATION && !hidePrice) {
+    out.revised_subtotal = planPartialFulfilment(items, []).subtotal;
+  }
 
   if (viewer === 'owner') {
     out.customer_name = order.customer_name || `Order ${order.order_code}`;
@@ -505,18 +518,50 @@ export async function updatePickup({ actorUserId, orderId, pickupSlotLabel }) {
 
 // ── transition ───────────────────────────────────────────────────────────────
 
-export async function transition({ actorUserId, orderId, action, reason }) {
+export async function transition({ actorUserId, orderId, action, reason, unavailableItemIds }) {
   const t = TRANSITIONS[action];
   if (!t) throw badRequest('UNKNOWN_ACTION', 'Unknown order action.');
 
-  const { shop } = await loadFull(orderId);
+  const { order, items, shop } = await loadFull(orderId);
 
   if (t.actor === 'owner' && shop.owner_user_id !== actorUserId) {
     throw forbidden('NOT_SHOP_OWNER', 'Only the shop can do that.');
   }
+  if (t.actor === 'shopper' && order.user_id !== actorUserId) {
+    throw forbidden('NOT_YOUR_ORDER', 'You cannot do that to this order.');
+  }
   if (needsReason(action) && !reason) {
     throw badRequest('REASON_REQUIRED', 'A reason is required to reject an order.');
   }
+
+  // Partial fulfilment: validate the flagged lines and refuse a flag that
+  // would leave nothing to confirm — the shop must reject instead.
+  let flagIds = [];
+  if (action === 'flag_unavailable') {
+    flagIds = [...new Set(unavailableItemIds || [])];
+    if (!flagIds.length) {
+      throw badRequest('UNAVAILABLE_ITEMS_REQUIRED', 'Select at least one item to flag.');
+    }
+    const known = new Set(items.map((it) => it.id));
+    for (const id of flagIds) {
+      if (!known.has(id)) {
+        throw badRequest('UNKNOWN_ORDER_ITEM', 'That item is not on this order.', { item_id: id });
+      }
+    }
+    const plan = planPartialFulfilment(items, flagIds);
+    if (plan.allUnavailable) {
+      throw conflict(
+        'NOTHING_LEFT_TO_CONFIRM',
+        'Every item would be unavailable — reject the order instead.',
+      );
+    }
+  }
+
+  // confirm_reduced writes the subtotal for the lines already flagged
+  // unavailable (by an earlier flag_unavailable call) — nothing more is
+  // flagged here, so passing an empty flag list just totals what's left.
+  const revisedSubtotal =
+    action === 'confirm_reduced' ? planPartialFulfilment(items, []).subtotal : null;
 
   // Expire first so you can't accept an order the shopper already saw die.
   await reconcileOne(orderId, shop.acceptance_sla_minutes);
@@ -531,6 +576,7 @@ export async function transition({ actorUserId, orderId, action, reason }) {
   }
 
   const stamp = stampFor(action);
+  const changedBy = t.actor === 'shopper' ? `user:${actorUserId}` : `shop:${shop.id}`;
   await db.transaction(async (trx) => {
     // Optimistic guard: only move if still in the status we just read.
     const n = await trx('orders')
@@ -540,15 +586,19 @@ export async function transition({ actorUserId, orderId, action, reason }) {
         [stamp]: trx.fn.now(),
         updated_at: trx.fn.now(),
         ...(action === 'reject' ? { rejection_reason: reason } : {}),
+        ...(action === 'confirm_reduced' ? { subtotal_amount: revisedSubtotal } : {}),
       });
     if (n === 0) {
       throw conflict('ORDER_CHANGED', 'This order was just updated. Refresh and try again.');
+    }
+    if (action === 'flag_unavailable') {
+      await trx('order_items').whereIn('id', flagIds).update({ unavailable: true });
     }
     await trx('order_status_history').insert({
       order_id: orderId,
       from_status: seen.status,
       to_status: to,
-      changed_by: `shop:${shop.id}`,
+      changed_by: changedBy,
       note: reason || null,
     });
   });
@@ -565,7 +615,7 @@ export async function transition({ actorUserId, orderId, action, reason }) {
   }
 
   return serializeOrder(full.order, full.items, {
-    viewer: 'owner',
+    viewer: t.actor === 'shopper' ? 'shopper' : 'owner',
     priceMode: shop.price_display_mode,
   });
 }

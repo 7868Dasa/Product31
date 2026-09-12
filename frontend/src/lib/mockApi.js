@@ -12,7 +12,7 @@ import { newShopSlug } from './slug.js';
 import { shopShareUrl } from './qr.js';
 import { priceBand } from './price.js';
 import { seedDemoOrders, seedMyDemoOrders } from './demoOrders.js';
-import { STATUS, ACTIVE, TRANSITIONS, nextStatus, isExpired } from './orderState.js';
+import { STATUS, ACTIVE, TRANSITIONS, nextStatus, isExpired, planPartialFulfilment } from './orderState.js';
 
 const DEMO_OTP = '123456';
 const USER_KEY = 'p31.demo.user';
@@ -40,16 +40,37 @@ const demoOrderCode = () =>
 
 // ── demo order store (localStorage; the mockApi owns it after the swap) ──────
 
+/**
+ * Backfill stable ids + line_total on older seed fixtures that predate
+ * partial fulfilment, so flag_unavailable / planPartialFulfilment have
+ * something to key off of and sum.
+ */
+function ensureItemIds(order) {
+  let changed = false;
+  const items = (order.items || []).map((it, i) => {
+    const id = it.id || `${order.id}-i${i}`;
+    const lineTotal =
+      it.line_total != null
+        ? it.line_total
+        : Math.round(Number(it.unit_price || 0) * Number(it.quantity || 0) * 100) / 100;
+    if (id === it.id && lineTotal === it.line_total) return it;
+    changed = true;
+    return { ...it, id, line_total: lineTotal };
+  });
+  return changed ? { ...order, items } : order;
+}
+
 function loadOrders() {
   const stored = readJson(ORDERS_KEY);
-  if (Array.isArray(stored)) return stored;
-  const seed = [...seedMyDemoOrders(), ...seedDemoOrders()];
-  try {
-    localStorage.setItem(ORDERS_KEY, JSON.stringify(seed));
-  } catch {
-    /* ignore */
-  }
-  return seed;
+  const list = Array.isArray(stored) ? stored : [...seedMyDemoOrders(), ...seedDemoOrders()];
+  let changed = !Array.isArray(stored);
+  const withIds = list.map((o) => {
+    const next = ensureItemIds(o);
+    if (next !== o) changed = true;
+    return next;
+  });
+  if (changed) saveOrders(withIds);
+  return withIds;
 }
 function saveOrders(list) {
   try {
@@ -108,6 +129,7 @@ function serializeOrder(o, viewer, shop) {
         ? Number(it.line_total)
         : Math.round(unitPrice * Number(it.quantity) * 100) / 100;
     return {
+      id: it.id,
       name: it.name,
       name_ta: it.name_ta || null,
       pack_size: it.pack_size || null,
@@ -115,6 +137,7 @@ function serializeOrder(o, viewer, shop) {
       sell_by: it.sell_by || 'pack',
       unit: it.unit || 'pack',
       price_basis: it.price_basis || 'per_pack',
+      unavailable: !!it.unavailable,
       ...(hide ? {} : { unit_price: unitPrice, line_total: lineTotal }),
     };
   });
@@ -136,6 +159,9 @@ function serializeOrder(o, viewer, shop) {
     ready_at: o.ready_at || null,
     collected_at: o.collected_at || null,
     no_show_at: o.no_show_at || null,
+    flagged_at: o.flagged_at || null,
+    confirmed_at: o.confirmed_at || null,
+    cancelled_at: o.cancelled_at || null,
     pickup_slot_label: o.pickup_slot_label || 'ASAP',
     pickup_hold_minutes: (shop && shop.pickup_hold_minutes) || o.pickup_hold_minutes || 90,
     acceptance_sla_minutes: (shop && shop.acceptance_sla_minutes) || o.acceptance_sla_minutes || 5,
@@ -151,6 +177,12 @@ function serializeOrder(o, viewer, shop) {
   if (viewer === 'owner') {
     out.customer_name = o.customer_name || `Order ${o.order_code}`;
     out.customer_phone_masked = maskDemoPhone(o.customer_phone);
+  }
+  // While a reduction awaits the shopper's decision, show what they'd
+  // actually pay if they confirm — subtotal_amount itself only changes once
+  // confirm_reduced lands.
+  if (o.status === STATUS.PENDING_CONFIRMATION && !hide) {
+    out.revised_subtotal = planPartialFulfilment(o.items || [], []).subtotal;
   }
   return out;
 }
@@ -403,13 +435,15 @@ export async function mockApi(path, { method = 'GET', body } = {}) {
     }
 
     const prices = demoShopPrices(slug);
-    const lines = (body?.items || []).map((it) => {
+    const orderId = `o${Date.now()}`;
+    const lines = (body?.items || []).map((it, i) => {
       const row = prices.get(it.item_id);
       if (!row) throw new MockError(400, 'ITEM_NOT_SOLD_HERE', 'One of those items is not sold at this shop.');
       const qty = Number(it.quantity);
       if (!(qty > 0)) throw new MockError(400, 'BAD_QUANTITY', 'Invalid quantity for an item.');
       const unit = Number(row.price);
       return {
+        id: `${orderId}-i${i}`,
         name: row.name,
         name_ta: row.name_ta || null,
         pack_size: row.pack_size || null,
@@ -431,7 +465,7 @@ export async function mockApi(path, { method = 'GET', body } = {}) {
     const now = new Date().toISOString();
     const auto = !!shop.auto_confirm;
     const order = {
-      id: `o${Date.now()}`,
+      id: orderId,
       order_code: demoOrderCode(),
       shop_slug: slug,
       shop_name: shop.shop_name,
@@ -524,19 +558,52 @@ export async function mockApi(path, { method = 'GET', body } = {}) {
     if (action === 'reject' && !body?.reason) {
       throw new MockError(400, 'REASON_REQUIRED', 'A reason is required to reject an order.');
     }
+
+    let flagIds = [];
+    let items = o.items || [];
+    if (action === 'flag_unavailable') {
+      flagIds = [...new Set(body?.unavailable_item_ids || [])];
+      if (!flagIds.length) {
+        throw new MockError(400, 'UNAVAILABLE_ITEMS_REQUIRED', 'Select at least one item to flag.');
+      }
+      const known = new Set(items.map((it) => it.id));
+      for (const id of flagIds) {
+        if (!known.has(id)) {
+          throw new MockError(400, 'UNKNOWN_ORDER_ITEM', 'That item is not on this order.');
+        }
+      }
+      const plan = planPartialFulfilment(items, flagIds);
+      if (plan.allUnavailable) {
+        throw new MockError(
+          409,
+          'NOTHING_LEFT_TO_CONFIRM',
+          'Every item would be unavailable — reject the order instead.',
+        );
+      }
+    }
+
     const to = nextStatus(o.status, action);
     if (!to) {
       throw new MockError(409, 'ILLEGAL_TRANSITION', `Cannot ${action} an order that is ${o.status}.`);
     }
+    if (action === 'flag_unavailable') {
+      items = items.map((it) => (flagIds.includes(it.id) ? { ...it, unavailable: true } : it));
+    }
     const next = {
       ...o,
+      items,
       status: to,
       [t.stamp]: new Date().toISOString(),
       ...(action === 'reject' ? { rejection_reason: body.reason } : {}),
+      ...(action === 'confirm_reduced'
+        ? { subtotal_amount: planPartialFulfilment(items, []).subtotal }
+        : {}),
     };
     all[idx] = next;
     saveOrders(all);
-    return { order: serializeOrder(next, 'owner', shopFor(next.shop_slug)) };
+    return {
+      order: serializeOrder(next, t.actor === 'shopper' ? 'shopper' : 'owner', shopFor(next.shop_slug)),
+    };
   }
 
   // ── account rights (DPDP): consent, export, delete ──────────────────

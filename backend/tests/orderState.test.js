@@ -10,6 +10,7 @@ import {
   needsReason,
   isExpired,
   computeTotals,
+  planPartialFulfilment,
 } from '../src/lib/orderState.js';
 
 describe('nextStatus — legal transitions', () => {
@@ -34,6 +35,26 @@ describe('nextStatus — legal transitions', () => {
     expect(nextStatus(STATUS.ACCEPTED, 'no_show')).toBe(STATUS.NO_SHOW);
     expect(nextStatus(STATUS.READY_FOR_PICKUP, 'no_show')).toBe(STATUS.NO_SHOW);
     expect(nextStatus(STATUS.PENDING_ACCEPTANCE, 'no_show')).toBeNull();
+  });
+
+  it('walks the partial-fulfilment branch: flag -> confirm back to ACCEPTED', () => {
+    expect(nextStatus(STATUS.ACCEPTED, 'flag_unavailable')).toBe(STATUS.PENDING_CONFIRMATION);
+    expect(nextStatus(STATUS.PENDING_CONFIRMATION, 'confirm_reduced')).toBe(STATUS.ACCEPTED);
+  });
+
+  it('walks the partial-fulfilment branch: flag -> cancel', () => {
+    expect(nextStatus(STATUS.ACCEPTED, 'flag_unavailable')).toBe(STATUS.PENDING_CONFIRMATION);
+    expect(nextStatus(STATUS.PENDING_CONFIRMATION, 'cancel_order')).toBe(STATUS.CANCELLED);
+  });
+
+  it('only allows flag_unavailable from ACCEPTED (not before or after packing starts)', () => {
+    expect(nextStatus(STATUS.PENDING_ACCEPTANCE, 'flag_unavailable')).toBeNull();
+    expect(nextStatus(STATUS.READY_FOR_PICKUP, 'flag_unavailable')).toBeNull();
+  });
+
+  it('only allows confirm_reduced/cancel_order from PENDING_CONFIRMATION', () => {
+    expect(nextStatus(STATUS.ACCEPTED, 'confirm_reduced')).toBeNull();
+    expect(nextStatus(STATUS.ACCEPTED, 'cancel_order')).toBeNull();
   });
 });
 
@@ -63,15 +84,20 @@ describe('nextStatus — illegal transitions return null', () => {
 });
 
 describe('transition metadata', () => {
-  it('only owner or system actors exist', () => {
+  it('only owner, shopper, or system actors exist', () => {
     for (const t of Object.values(TRANSITIONS)) {
-      expect(['owner', 'system']).toContain(t.actor);
+      expect(['owner', 'shopper', 'system']).toContain(t.actor);
     }
   });
 
   it('expire is the only system action', () => {
     const system = Object.entries(TRANSITIONS).filter(([, t]) => t.actor === 'system');
     expect(system.map(([k]) => k)).toEqual(['expire']);
+  });
+
+  it('confirm_reduced and cancel_order are the only shopper actions', () => {
+    const shopper = Object.entries(TRANSITIONS).filter(([, t]) => t.actor === 'shopper');
+    expect(shopper.map(([k]) => k).sort()).toEqual(['cancel_order', 'confirm_reduced']);
   });
 
   it('reject is the only action needing a reason', () => {
@@ -171,5 +197,30 @@ describe('computeTotals', () => {
   it('throws EMPTY_ORDER for an empty or non-array item list', () => {
     expect(() => computeTotals([], priceOf)).toThrow('EMPTY_ORDER');
     expect(() => computeTotals(null, priceOf)).toThrow('EMPTY_ORDER');
+  });
+});
+
+describe('planPartialFulfilment', () => {
+  const items = [
+    { id: 'i1', line_total: 100 },
+    { id: 'i2', line_total: 50 },
+    { id: 'i3', line_total: 25 },
+  ];
+
+  it('sums only the lines not flagged unavailable', () => {
+    expect(planPartialFulfilment(items, ['i2'])).toEqual({ allUnavailable: false, subtotal: 125 });
+  });
+
+  it('flags allUnavailable when every remaining line is flagged', () => {
+    expect(planPartialFulfilment(items, ['i1', 'i2', 'i3'])).toEqual({ allUnavailable: true, subtotal: 0 });
+  });
+
+  it('treats items already marked unavailable as already excluded', () => {
+    const withPreflagged = [...items.slice(0, 2), { id: 'i3', line_total: 25, unavailable: true }];
+    expect(planPartialFulfilment(withPreflagged, ['i2'])).toEqual({ allUnavailable: false, subtotal: 100 });
+  });
+
+  it('flagging nothing leaves the full subtotal untouched', () => {
+    expect(planPartialFulfilment(items, [])).toEqual({ allUnavailable: false, subtotal: 175 });
   });
 });

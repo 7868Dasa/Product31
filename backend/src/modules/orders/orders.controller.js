@@ -36,6 +36,7 @@ export async function transition(req, res) {
     orderId: req.params.id,
     action: req.body.action,
     reason: req.body.reason,
+    unavailableItemIds: req.body.unavailable_item_ids,
   });
   res.json({ order });
 }

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Store, RotateCcw, Check, PieChart, Clock, Pencil } from 'lucide-react';
+import { Store, RotateCcw, Check, PieChart, Clock, Pencil, PackageX } from 'lucide-react';
 import { useI18n } from '../i18n/index.jsx';
 import { useStore } from '../store.jsx';
 import { TopBar } from '../components/TopBar.jsx';
@@ -83,6 +83,7 @@ const STEPS = ['placed', 'accepted', 'ready', 'collected'];
 const STEP_OF = {
   PENDING_ACCEPTANCE: 0,
   ACCEPTED: 1,
+  PENDING_CONFIRMATION: 1,
   READY_FOR_PICKUP: 2,
   COLLECTED: 3,
 };
@@ -98,6 +99,7 @@ function timeAgo(iso, t) {
 function pickupNote(order, t, lang) {
   const hold = order.pickup_hold_minutes || 90;
   if (order.status === 'PENDING_ACCEPTANCE') return t('ord.pickup.waiting');
+  if (order.status === 'PENDING_CONFIRMATION') return t('ord.pickup.pendingConfirmation');
   if (order.status === 'ACCEPTED') return t('ord.pickup.packing');
   if (order.status === 'READY_FOR_PICKUP') {
     if (!order.ready_at) return t('ord.pickup.readySoon');
@@ -132,6 +134,59 @@ function StatusBar({ status, t }) {
         </li>
       ))}
     </ol>
+  );
+}
+
+/** Shopper decides on a shop-reduced order: pay the new total or cancel. */
+function ReducedOrderPrompt({ order }) {
+  const { t, lang } = useI18n();
+  const { confirmReduced, cancelReducedOrder } = useStore();
+  const [busy, setBusy] = useState(false);
+  const dropped = (order.items || []).filter((i) => i.unavailable);
+
+  async function run(action) {
+    setBusy(true);
+    try {
+      await action(order.id);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mt-3 rounded-xl2 border border-warn/40 bg-warn/10 p-3">
+      <p className="flex items-center gap-1.5 text-sm font-extrabold text-warn">
+        <PackageX size={15} /> {t('ord.reduced.title')}
+      </p>
+      <ul className="mt-1.5 space-y-0.5 text-sm text-ink-soft">
+        {dropped.map((i) => (
+          <li key={i.id} className="line-through">
+            {i.quantity}× {lang === 'ta' && i.name_ta ? i.name_ta : i.name}
+          </li>
+        ))}
+      </ul>
+      {order.revised_subtotal != null && (
+        <p className="mt-1.5 text-base font-bold">
+          {t('ord.reduced.newTotal')}: ₹{order.revised_subtotal}
+        </p>
+      )}
+      <div className="mt-3 flex gap-2">
+        <button
+          disabled={busy}
+          onClick={() => run(cancelReducedOrder)}
+          className="flex flex-1 items-center justify-center rounded-full border border-stop/40 py-2.5 text-sm font-semibold text-stop transition-transform active:scale-[0.97] disabled:opacity-50"
+        >
+          {t('ord.reduced.cancel')}
+        </button>
+        <button
+          disabled={busy}
+          onClick={() => run(confirmReduced)}
+          className="flex flex-[2] items-center justify-center rounded-full bg-primary py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.97] disabled:opacity-50"
+        >
+          {t('ord.reduced.confirm', { amount: order.revised_subtotal })}
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -170,9 +225,11 @@ function OrderCard({ order, onBuyAgain }) {
               ? 'bg-go/15 text-go'
               : order.status === 'READY_FOR_PICKUP'
                 ? 'bg-primary text-white'
-                : ACTIVE.includes(order.status)
-                  ? 'bg-primary-tint text-primary-dark'
-                  : 'bg-stop/15 text-stop'
+                : order.status === 'PENDING_CONFIRMATION'
+                  ? 'bg-warn/15 text-warn'
+                  : ACTIVE.includes(order.status)
+                    ? 'bg-primary-tint text-primary-dark'
+                    : 'bg-stop/15 text-stop'
           }`}
         >
           {t(`ord.status.${order.status}`)}
@@ -209,6 +266,8 @@ function OrderCard({ order, onBuyAgain }) {
       )}
 
       <StatusBar status={order.status} t={t} />
+
+      {order.status === 'PENDING_CONFIRMATION' && <ReducedOrderPrompt order={order} />}
 
       {done && (
         <button

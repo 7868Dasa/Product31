@@ -209,11 +209,11 @@ export function StoreProvider({ children }) {
   );
 
   const transition = useCallback(
-    async (id, action, reason) => {
+    async (id, action, reason, extra) => {
       const { order } = await api(`/orders/${id}/transitions`, {
         method: 'POST',
         authed: true,
-        body: { action, ...(reason ? { reason } : {}) },
+        body: { action, ...(reason ? { reason } : {}), ...extra },
       });
       applyOrderUpdate(order);
       return order;
@@ -242,6 +242,16 @@ export function StoreProvider({ children }) {
   );
   const markReady = useCallback((id) => transition(id, 'ready'), [transition]);
   const markCollected = useCallback((id) => transition(id, 'collect'), [transition]);
+
+  /** Shop flags one or more lines out of stock while packing an ACCEPTED order. */
+  const flagUnavailable = useCallback(
+    (id, itemIds) => transition(id, 'flag_unavailable', null, { unavailable_item_ids: itemIds }),
+    [transition],
+  );
+  /** Shopper accepts the shop's reduced order (back to ACCEPTED, new total). */
+  const confirmReduced = useCallback((id) => transition(id, 'confirm_reduced'), [transition]);
+  /** Shopper cancels instead of accepting the reduction. */
+  const cancelReducedOrder = useCallback((id) => transition(id, 'cancel_order'), [transition]);
 
   // ── favourite shops (per device; opportunistically synced to a backend) ──
   const isFavShop = useCallback((slug) => favShops.some((s) => s.slug === slug), [favShops]);
@@ -306,6 +316,9 @@ export function StoreProvider({ children }) {
     rejectOrder,
     markReady,
     markCollected,
+    flagUnavailable,
+    confirmReduced,
+    cancelReducedOrder,
     resetDemoOrders,
     hasActiveOrder: () => myOrdersList.some((o) => ACTIVE.includes(o.status)),
 

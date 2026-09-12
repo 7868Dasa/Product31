@@ -28,8 +28,19 @@ export const shopOrdersQuerySchema = z.object({
 });
 
 export const transitionSchema = z.object({
-  action: z.enum(['accept', 'reject', 'ready', 'collect', 'no_show']),
+  action: z.enum([
+    'accept',
+    'reject',
+    'flag_unavailable',
+    'confirm_reduced',
+    'cancel_order',
+    'ready',
+    'collect',
+    'no_show',
+  ]),
   reason: z.string().trim().min(2).max(200).optional(),
+  // flag_unavailable only: the order_item ids the shop is marking out of stock.
+  unavailable_item_ids: z.array(z.string().uuid()).min(1).max(50).optional(),
 });
 
 // Shopper edits their own pickup time — only while the order is still early
