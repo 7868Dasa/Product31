@@ -153,7 +153,7 @@ function AisleNav({ cats }) {
 
 export function ShopDetail({ user }) {
   const { slug } = useParams();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { isFavShop, toggleFavShop } = useStore();
   const [state, setState] = useState({ status: 'loading' });
 
@@ -178,8 +178,16 @@ export function ShopDetail({ user }) {
       if (!by.has(it.category)) by.set(it.category, []);
       by.get(it.category).push(it);
     }
+    // Alphabetise the items within each aisle by whatever name is on screen
+    // (Tamil name in Tamil mode, else English) — categories keep their own
+    // order (Essentials-first etc.), only the article list within one sorts.
+    const displayName = (it) => (lang === 'ta' && it.name_ta ? it.name_ta : it.name) || '';
+    const collator = new Intl.Collator(lang === 'ta' ? 'ta' : 'en', { sensitivity: 'base' });
+    for (const items of by.values()) {
+      items.sort((a, b) => collator.compare(displayName(a), displayName(b)));
+    }
     return [...by.entries()];
-  }, [state]);
+  }, [state, lang]);
 
   const shop = state.status === 'ok' ? state.shop : null;
   const withinHours = shop ? isWithinHours(shop.opening_hours) : true;
