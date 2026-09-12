@@ -328,7 +328,7 @@ export function ShopDetail({ user }) {
         )}
       </main>
 
-      {state.status === 'ok' && accepting && <CartBar shop={state.shop} />}
+      {state.status === 'ok' && <CartBar shop={state.shop} accepting={accepting} />}
     </div>
   );
 }

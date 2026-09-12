@@ -28,7 +28,7 @@ const priceLabel = (l, t) => {
 };
 const lineTotal = (l) => Math.round((l.unit_price || 0) * l.qty);
 
-export function CartBar({ shop }) {
+export function CartBar({ shop, accepting = true }) {
   const { t, lang } = useI18n();
   const { cartForShop, setCartQty, clearCart, placeOrder } = useStore();
   const lines = cartForShop(shop.slug);
@@ -96,13 +96,18 @@ export function CartBar({ shop }) {
           footer={
             <button
               onClick={submit}
-              disabled={lines.length === 0 || busy}
+              disabled={!accepting || lines.length === 0 || busy}
               className="flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3.5 text-lg font-semibold text-white active:bg-primary-dark disabled:opacity-50"
             >
               {busy ? t('cart.placing') : t('cart.place')}
             </button>
           }
         >
+          {!accepting && (
+            <p className="mb-2 rounded-xl bg-stop/10 px-3 py-2 text-sm font-semibold text-stop">
+              {t('cart.shopClosed')}
+            </p>
+          )}
           {err && (
             <p className="mb-2 rounded-xl bg-stop/10 px-3 py-2 text-sm font-semibold text-stop">{err}</p>
           )}

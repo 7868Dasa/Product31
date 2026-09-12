@@ -187,6 +187,7 @@
   "cart.placedSub": "Show this code at the counter:",
   "cart.placedHint": "Pickup: {slot}. You'll be alerted when it's ready — then about {hold} min to collect.",
   "cart.placedConfirmed": "Confirmed — the shop is preparing your order.",
+  "cart.shopClosed": "This shop is closed right now — your cart is saved, come back when it reopens.",
   "pickup.asap": "As soon as possible",
   "pickup.label": "Pickup",
   "shop.priceRangeNote": "This shop shows price ranges. The exact total is confirmed at pickup.",
