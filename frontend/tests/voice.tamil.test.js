@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { matchLine } from '../src/lib/voice/match.js';
 import { romanize, tamilSkeleton, skeletonEq, cleanUnicode } from '../src/lib/voice/translit.js';
+import { phoneticEq } from '../src/lib/voice/phonetics.js';
 
 const CATALOG = [
   { id: 'marie', name: 'Marie Biscuit', name_ta: 'மேரி பிஸ்கட்', brand: 'Britannia', pack_size: '150g', sell_by: 'pack', in_stock: true },
@@ -66,5 +67,36 @@ describe('no false positives from cross-script fuzz', () => {
 
   it('English noise "shampoo" still -> not_found', () => {
     expect(matchLine('shampoo', CATALOG, { lang: 'en' }).needs).toBe('not_found');
+  });
+});
+
+describe('short (2-class) Tamil skeleton false positives', () => {
+  // "பால்" (milk) and "apple" both collapse to the 2-class skeleton "PL" —
+  // a coincidence, not a real ASR mishearing, so phoneticEq must not trust
+  // it alone the way it trusts a longer, more specific skeleton.
+  const MILK_CATALOG = [
+    ...CATALOG,
+    { id: 'milk', name: 'Aavin Milk', name_ta: 'ஆவின் பால்', brand: 'Aavin', pack_size: '500ml', sell_by: 'pack', in_stock: true },
+    { id: 'apple', name: 'Apple', name_ta: null, brand: null, sell_by: 'piece', in_stock: true },
+  ];
+
+  it('skeletonEq alone sees the "PL" collision, but phoneticEq rejects it', () => {
+    expect(skeletonEq('பால்', 'apple')).toBe(true);
+    expect(phoneticEq('பால்', 'apple')).toBe(false);
+  });
+
+  it('"பால்" resolves to milk, not the coincidentally-colliding "Apple"', () => {
+    expect(matchLine('பால்', MILK_CATALOG, { lang: 'ta' }).matched_product_id).toBe('milk');
+  });
+
+  it('a real mishearing (பாள் for பால், same romanisation "paal") still resolves to milk', () => {
+    expect(phoneticEq('பாள்', 'பால்')).toBe(true); // same class, close once romanised
+    expect(matchLine('பாள்', MILK_CATALOG, { lang: 'ta' }).matched_product_id).toBe('milk');
+  });
+
+  it('a longer (3+ class) skeleton match is trusted without the romanisation check', () => {
+    // பருப்பு / parupu both skeleton to "PRP" (3 classes) — already covered
+    // above via matchLine; assert phoneticEq directly here too.
+    expect(phoneticEq('parupu', 'பருப்பு')).toBe(true);
   });
 });

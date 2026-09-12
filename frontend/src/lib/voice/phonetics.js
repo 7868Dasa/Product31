@@ -10,7 +10,8 @@
  * distance against `name_ta`.
  */
 import { doubleMetaphone } from 'double-metaphone';
-import { hasTamil, romanize, skeletonEq } from './translit.js';
+import { hasTamil, romanize, skeletonEq, tamilSkeleton } from './translit.js';
+import { similarity } from './textDistance.js';
 
 export function phoneticKey(token) {
   if (!token) return null;
@@ -27,8 +28,18 @@ export function phoneticKey(token) {
 /** Do two tokens sound the same (or one is a phonetic prefix of the other)? */
 export function phoneticEq(a, b) {
   // Tamil consonant-class skeleton — catches ழ/ள/ல, ண/ன/ந, ற/ர swaps that
-  // metaphone (Latin-trained) misses.
-  if ((hasTamil(a) || hasTamil(b)) && skeletonEq(a, b)) return true;
+  // metaphone (Latin-trained) misses. A skeleton of just 2 classes (e.g.
+  // "PL") is short enough that unrelated words collide by coincidence
+  // (பால் "milk" and "apple" both collapse to "PL"), so a 2-class match is
+  // only trusted once the romanised forms are also close — real swaps like
+  // பால்/பாள் romanise identically ("paal"), coincidences don't. A 3+ class
+  // skeleton is specific enough to stand on its own.
+  if ((hasTamil(a) || hasTamil(b)) && skeletonEq(a, b)) {
+    if (tamilSkeleton(a).length >= 3) return true;
+    const ra = hasTamil(a) ? romanize(a) : a;
+    const rb = hasTamil(b) ? romanize(b) : b;
+    return similarity(ra, rb) >= 0.5;
+  }
   const ka = phoneticKey(a);
   const kb = phoneticKey(b);
   if (!ka || !kb) return false;
