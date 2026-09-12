@@ -349,6 +349,12 @@ function SettingsPanel({ shop, t, onSave }) {
         </span>
       </label>
 
+      {auto && shop.price_display_mode === 'hidden' && (
+        <p className="rounded-xl2 border border-stop/30 bg-stop/5 px-3 py-2 text-xs font-medium text-stop">
+          {t('sk.settings.autoConfirmHiddenWarn')}
+        </p>
+      )}
+
       <button
         onClick={save}
         disabled={busy || !dirty}

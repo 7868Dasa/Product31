@@ -460,8 +460,13 @@ export async function mockApi(path, { method = 'GET', body } = {}) {
     if (changed) saveOrders(list);
     let rows = list.filter((o) => o.shop_slug === slug);
     const status = q.get('status');
+    const isToday = (o) => new Date(o.created_at).toDateString() === new Date().toDateString();
     if (status === 'active') rows = rows.filter((o) => ACTIVE.includes(o.status));
     else if (status) rows = rows.filter((o) => o.status === status);
+    // Default (the dashboard's poll, no explicit status): mirror the backend
+    // bound — active orders regardless of age, plus TODAY's terminal ones
+    // only, so "Today" / "cash collected today" don't grow to all-time.
+    else rows = rows.filter((o) => ACTIVE.includes(o.status) || isToday(o));
     rows = rows.slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     return { count: rows.length, orders: rows.map((o) => serializeOrder(o, 'owner', shop)) };
   }

@@ -16,7 +16,10 @@ import {
   nativeAsrAvailable,
   ensureSpeechPermission,
   createNativeRecognizer,
+  bcp47,
 } from './nativeAsr.js';
+
+export { bcp47 };
 
 const SR = typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition);
 
@@ -33,10 +36,6 @@ export function asrKind() {
  */
 export function asrSupported() {
   return asrKind() !== 'none';
-}
-
-export function bcp47(lang) {
-  return lang === 'ta' ? 'ta-IN' : 'en-IN';
 }
 
 /**

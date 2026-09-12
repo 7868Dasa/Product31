@@ -200,6 +200,7 @@
   "sk.settings.prepHint": "The notice you want before pickup. Shoppers see this and choose their pickup time.",
   "sk.settings.autoConfirm": "Auto-confirm orders",
   "sk.settings.autoConfirmHint": "New orders are accepted automatically, so the shopper isn't left waiting. You still mark them ready and collected.",
+  "sk.settings.autoConfirmHiddenWarn": "Your prices are set to hidden — with auto-confirm on, the shopper sees the real total immediately instead of at pickup.",
   "sk.settings.save": "Save changes",
   "sk.settings.saved": "Saved",
   "sk.new.none": "No new orders right now.",

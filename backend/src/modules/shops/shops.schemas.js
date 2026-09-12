@@ -12,7 +12,9 @@ export const createShopSchema = z.object({
   opening_hours: z.string().trim().max(120).optional(),
   price_display_mode: z.enum(['exact', 'range', 'hidden']).default('exact'),
   prep_time_minutes: z.coerce.number().int().min(0).max(120).optional(),
-  auto_confirm: z.coerce.boolean().optional(),
+  // A real JSON boolean, not coerced — z.coerce.boolean() runs JS Boolean(),
+  // so a string body like "false" would coerce to true.
+  auto_confirm: z.boolean().optional(),
 });
 
 export const updateShopSchema = z
@@ -27,7 +29,7 @@ export const updateShopSchema = z
     opening_hours: z.string().trim().max(120),
     price_display_mode: z.enum(['exact', 'range', 'hidden']),
     prep_time_minutes: z.coerce.number().int().min(0).max(120),
-    auto_confirm: z.coerce.boolean(),
+    auto_confirm: z.boolean(),
     is_open: z.boolean(),
   })
   .partial()

@@ -38,7 +38,18 @@ export function CartBar({ shop }) {
   const [err, setErr] = useState(null);
   const [pickup, setPickup] = useState('ASAP');
 
-  const slots = useMemo(() => (open ? pickupSlots(shop, t) : []), [open, shop, t]);
+  const slots = useMemo(() => {
+    if (!open) return [];
+    const opts = pickupSlots(shop, t);
+    // The modal can stay open across the boundary pickupTimes() regenerates
+    // from ("now" moves on) — keep whatever is already selected choosable so
+    // the <select> never silently falls back to a different value than what
+    // `pickup` state (and therefore the order) actually holds.
+    if (!opts.some((o) => o.value === pickup)) {
+      opts.splice(1, 0, { value: pickup, label: pickup === 'ASAP' ? opts[0].label : pickup });
+    }
+    return opts;
+  }, [open, shop, t, pickup]);
 
   async function submit() {
     setBusy(true);

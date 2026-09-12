@@ -220,9 +220,17 @@ async function insertOrderWithCode(trx, base) {
   for (let i = 0; i < 6; i += 1) {
     const order_code = newOrderCode();
     try {
+      // Each attempt runs in its own SAVEPOINT (trx.transaction() nested in an
+      // existing trx). A unique-violation only rolls back to the savepoint —
+      // without it, Postgres marks the WHOLE transaction aborted on the first
+      // failed INSERT, so the "retry" below would just throw 25P02 instead of
+      // getting a fresh 23505 to catch, and the order POST would 500.
       // eslint-disable-next-line no-await-in-loop
-      const [row] = await trx('orders').insert({ ...base, order_code }).returning('id');
-      return row.id;
+      const id = await trx.transaction(async (sp) => {
+        const [row] = await sp('orders').insert({ ...base, order_code }).returning('id');
+        return row.id;
+      });
+      return id;
     } catch (err) {
       if (isUniqueViolation(err, 'orders_shop_day_code_uidx')) continue; // retry a new code
       throw err;
@@ -397,6 +405,15 @@ export async function listShopQueue({ ownerUserId, slug, status }) {
   const q = db('orders').where({ shop_id: shop.id });
   if (status === 'active') q.whereIn('status', ACTIVE);
   else if (status) q.where({ status });
+  else {
+    // Default (the dashboard's poll, no explicit status): active orders
+    // regardless of age, plus TODAY's terminal ones only. Without this bound
+    // the "Today" tab and "cash collected today" silently become all-time,
+    // and the payload grows across the shop's entire lifetime.
+    q.where((b) => {
+      b.whereIn('status', ACTIVE).orWhereRaw("created_at::date = current_date");
+    });
+  }
   const rows = await q.orderBy('created_at', 'asc'); // queue: oldest first
 
   const withShop = rows.map((r) => ({
@@ -472,7 +489,15 @@ export async function updatePickup({ actorUserId, orderId, pickupSlotLabel }) {
   if (![STATUS.PENDING_ACCEPTANCE, STATUS.ACCEPTED].includes(order.status)) {
     throw conflict('PICKUP_LOCKED', 'This order is too far along to change the pickup time.');
   }
-  await db('orders').where({ id: orderId }).update({ pickup_slot_label: pickupSlotLabel });
+  // Re-check status in the WHERE clause too — the order the shopper just read
+  // may have been marked READY between that read and this write.
+  const n = await db('orders')
+    .where({ id: orderId })
+    .whereIn('status', [STATUS.PENDING_ACCEPTANCE, STATUS.ACCEPTED])
+    .update({ pickup_slot_label: pickupSlotLabel });
+  if (n === 0) {
+    throw conflict('PICKUP_LOCKED', 'This order is too far along to change the pickup time.');
+  }
 
   const { order: fresh, items } = await loadFull(orderId);
   return serializeOrder(fresh, items, { viewer: 'shopper', priceMode: shop.price_display_mode });

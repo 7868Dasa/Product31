@@ -129,10 +129,17 @@ export function createNativeRecognizer({ lang, onResult, onError, onEnd }) {
           popup: false,
           maxResults: 1,
         });
-        // iOS resolves start() with the final matches.
-        const m = (res?.matches || [])[0] || '';
-        if (m) lastText = m;
-        finish();
+        // iOS resolves start() with the final matches once recognition ends.
+        // Android resolves this promise immediately (before the user has
+        // finished speaking) when partialResults is on — completion there is
+        // signalled only by the 'listeningState' -> 'stopped' event above.
+        // Finishing here unconditionally would tear the listeners down
+        // before any Android speech is ever captured.
+        if (Capacitor.getPlatform() === 'ios') {
+          const m = (res?.matches || [])[0] || '';
+          if (m) lastText = m;
+          finish();
+        }
       } catch (e) {
         stopped = true;
         await cleanup();
