@@ -105,7 +105,7 @@ export function ShopList({ user }) {
   const cats = useMemo(() => {
     const seen = new Set();
     for (const s of state.shops) if (s.category) seen.add(s.category);
-    return orderCategories(seen); // fixed display order: Grocery, Bakery, Supermarket, Retail, Tea Shop…
+    return orderCategories(seen); // fixed display order: Grocery, Bakery, Supermarket, Wholesale, Tea Shop…
   }, [state.shops]);
 
   const visible = useMemo(

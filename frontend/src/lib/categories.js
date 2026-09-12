@@ -8,7 +8,7 @@ export const SHOP_CATEGORIES = [
   'Grocery',
   'Bakery',
   'Supermarket',
-  'Retail',
+  'Wholesale',
   'Tea Shop',
   'Pharmacy',
   'Stationery',
